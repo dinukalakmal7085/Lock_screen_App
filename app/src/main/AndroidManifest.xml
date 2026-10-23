@@ -11,6 +11,7 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
         android:supportsRtl="true">
+        <activity android:name=".ThemePreviewActivity" android:exported="false" />
         <activity android:name=".EditorActivity" android:exported="false" />
         <activity android:name=".SwitcherActivity" android:exported="false" />
         <activity android:name=".MainActivity" android:exported="true">

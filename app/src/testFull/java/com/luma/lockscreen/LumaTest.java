@@ -34,7 +34,13 @@ public class LumaTest {
     try (ActivityController<MainActivity> c =
         Robolectric.buildActivity(MainActivity.class).setup()) {
       MainActivity a = c.get();
-      findDescription(a.getWindow().getDecorView(), "Select Tide wallpaper").performClick();
+      findDescription(a.getWindow().getDecorView(), "Preview Tide theme").performClick();
+      try (ActivityController<ThemePreviewActivity> theme =
+          Robolectric.buildActivity(
+                  ThemePreviewActivity.class, shadowOf(a).getNextStartedActivity())
+              .setup()) {
+        findDescription(theme.get().getWindow().getDecorView(), "Use preview theme").performClick();
+      }
       findDescription(a.getWindow().getDecorView(), "Classic clock style").performClick();
       assertEquals(1, new Preferences(a).clock());
       assertEquals(2, new Preferences(a).wallpaper());
@@ -51,7 +57,13 @@ public class LumaTest {
       View decor = c.get().getWindow().getDecorView();
       findDescription(decor, "Wallpapers tab").performClick();
       assertNotNull(findText(c.get().getWindow().getDecorView(), "Find your signature."));
-      findDescription(c.get().getWindow().getDecorView(), "Select Ember wallpaper").performClick();
+      findDescription(c.get().getWindow().getDecorView(), "Preview Ember theme").performClick();
+      try (ActivityController<ThemePreviewActivity> theme =
+          Robolectric.buildActivity(
+                  ThemePreviewActivity.class, shadowOf(c.get()).getNextStartedActivity())
+              .setup()) {
+        findDescription(theme.get().getWindow().getDecorView(), "Use preview theme").performClick();
+      }
       assertEquals(3, new Preferences(c.get()).wallpaper());
       findText(c.get().getWindow().getDecorView(), "Preview selected wallpaper  ↗").performClick();
       Intent next = shadowOf(c.get()).getNextStartedActivity();

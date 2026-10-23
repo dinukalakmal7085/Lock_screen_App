@@ -21,7 +21,7 @@ for edition in ['full', 'studio']:
     if expected_certificate:
         assert certificates[-1] == expected_certificate, 'Expected debug signing identity changed'
     badging = subprocess.check_output([str(tools/'aapt'), 'dump', 'badging', str(apk)], text=True)
-    assert "package: name='com.luma.lockscreen' versionCode='4'" in badging, edition
+    assert "package: name='com.luma.lockscreen' versionCode='5'" in badging, edition
     assert "targetSdkVersion:'36'" in badging, edition
     permissions = subprocess.check_output([str(tools/'aapt'), 'dump', 'permissions', str(apk)], text=True)
     actual = set(re.findall(r"uses-permission: name='([^']+)'", permissions))

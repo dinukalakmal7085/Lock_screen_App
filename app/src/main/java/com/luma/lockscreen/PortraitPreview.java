@@ -14,12 +14,22 @@ final class PortraitPreview extends FrameLayout {
   }
 
   PortraitPreview(Context context, Preferences prefs) {
+    this(context, prefs, false);
+  }
+
+  PortraitPreview(Context context, Preferences prefs, boolean sample) {
     super(context);
     android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
     faceWidth = Math.min(metrics.widthPixels, metrics.heightPixels);
     faceHeight = Math.max(metrics.widthPixels, metrics.heightPixels);
     face = new RoundedFrameLayout(context, 32);
-    face.addView(new LockFace(context, false, prefs), new LayoutParams(-1, -1));
+    LockFace design = new LockFace(context, false, prefs, 480);
+    design.hideHint();
+    if (sample) {
+      design.clock.setFormat12Hour("'09:41'");
+      design.clock.setFormat24Hour("'09:41'");
+    }
+    face.addView(design, new LayoutParams(-1, -1));
     face.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
     addView(face);
     setContentDescription("Portrait preview of " + prefs.wallpaperName() + " lock screen");

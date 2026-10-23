@@ -17,9 +17,9 @@ public final class MainActivity extends Activity {
   private Preferences prefs;
   private LinearLayout root, body;
   private ScrollView scroll;
-  private int tab, restoreScroll;
+  private int tab, restoreScroll, filterScrollX;
   private String themeQuery = "", themeCollection = "All";
-  private boolean awaitingOverlay, applying;
+  private boolean awaitingOverlay, applying, resumed;
   private final ExecutorService io = Executors.newSingleThreadExecutor();
   private static final int PHOTO = 10, NOTIFICATIONS = 11;
 
@@ -32,7 +32,13 @@ public final class MainActivity extends Activity {
       prefs.setFlag("notifications", false);
       prefs.setFlag("details", false);
     }
-    if (saved != null) tab = saved.getInt("tab", 0);
+    if (saved != null) {
+      tab = saved.getInt("tab", 0);
+      themeQuery = saved.getString("themeQuery", "");
+      themeCollection = saved.getString("themeCollection", "All");
+      filterScrollX = saved.getInt("filterScrollX", 0);
+      restoreScroll = saved.getInt("scrollY", 0);
+    }
     render();
   }
 
@@ -40,6 +46,10 @@ public final class MainActivity extends Activity {
   protected void onSaveInstanceState(Bundle b) {
     super.onSaveInstanceState(b);
     b.putInt("tab", tab);
+    b.putString("themeQuery", themeQuery);
+    b.putString("themeCollection", themeCollection);
+    b.putInt("filterScrollX", filterScrollX);
+    b.putInt("scrollY", scroll == null ? restoreScroll : scroll.getScrollY());
   }
 
   @Override
@@ -55,7 +65,8 @@ public final class MainActivity extends Activity {
         toast("Lock-screen access wasn't enabled. Preview still works.");
       }
     }
-    if (root != null) refresh();
+    if (root != null && resumed) refresh();
+    resumed = true;
   }
 
   private void refresh() {
@@ -138,7 +149,7 @@ public final class MainActivity extends Activity {
     hero.setOnClickListener(v -> preview());
     hero.setBackground(Ui.rounded(Ui.PANEL, 28, this));
     hero.setClipToOutline(true);
-    hero.addView(new LockFace(this, true), new FrameLayout.LayoutParams(-1, -1));
+    hero.addView(new PortraitPreview(this, prefs), new FrameLayout.LayoutParams(-1, -1));
     TextView expand = Ui.bold(this, "⤢", 24, Color.WHITE);
     expand.setGravity(Gravity.CENTER);
     expand.setContentDescription("Open full-screen preview");
@@ -224,6 +235,9 @@ public final class MainActivity extends Activity {
     body.addView(search, new LinearLayout.LayoutParams(-1, dp(48)));
     HorizontalScrollView filters = new HorizontalScrollView(this);
     filters.setHorizontalScrollBarEnabled(false);
+    filters.setContentDescription("Theme collection filters");
+    int savedFilterX = filterScrollX;
+    filters.setOnScrollChangeListener((v, x, y, oldX, oldY) -> filterScrollX = x);
     LinearLayout chips = Ui.row(this);
     for (String collection : ThemeCatalog.COLLECTIONS) {
       TextView chip =
@@ -232,10 +246,12 @@ public final class MainActivity extends Activity {
               collection,
               themeCollection.equals(collection),
               () -> {
+                filterScrollX = filters.getScrollX();
                 themeCollection = collection;
                 refresh();
               });
       chip.setTextSize(11);
+      chip.setSelected(themeCollection.equals(collection));
       chip.setMinHeight(dp(42));
       chip.setContentDescription(collection + " collection");
       LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
@@ -243,6 +259,7 @@ public final class MainActivity extends Activity {
       chips.addView(chip, lp);
     }
     filters.addView(chips);
+    filters.post(() -> filters.scrollTo(savedFilterX, 0));
     body.addView(filters);
     gap(18);
     LinearLayout grid = Ui.column(this);
@@ -267,10 +284,8 @@ public final class MainActivity extends Activity {
     body.addView(Ui.button(this, "Apply lock wallpaper", false, this::applyWallpaper));
   }
 
-  private void renderThemes(LinearLayout grid) {
-    grid.removeAllViews();
-    LinearLayout row = null;
-    int visible = 0;
+  private int[] matchingThemes() {
+    java.util.List<Integer> matches = new java.util.ArrayList<>();
     for (int i : ThemeCatalog.DISPLAY_ORDER) {
       if (!ThemeCatalog.NAMES[i]
           .toLowerCase(java.util.Locale.ROOT)
@@ -280,6 +295,24 @@ public final class MainActivity extends Activity {
           && !themeCollection.equals("Favorites")
           && !(themeCollection.equals("Cinematic") && ThemeCatalog.cinematic(i))
           && !ThemeCatalog.collection(i).equals(themeCollection)) continue;
+      matches.add(i);
+    }
+    return matches.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  private void openTheme(int id, int[] choices) {
+    startActivity(
+        new Intent(this, ThemePreviewActivity.class)
+            .putExtra("theme", id)
+            .putExtra("themes", choices));
+  }
+
+  private void renderThemes(LinearLayout grid) {
+    grid.removeAllViews();
+    LinearLayout row = null;
+    int visible = 0;
+    final int[] choices = matchingThemes();
+    for (int i : choices) {
       if (visible % 2 == 0) {
         row = Ui.row(this);
         row.setGravity(Gravity.TOP);
@@ -289,18 +322,7 @@ public final class MainActivity extends Activity {
       LinearLayout tile = Ui.column(this);
       FrameLayout art = new RoundedFrameLayout(this, 22);
       art.setBackground(Ui.rounded(Ui.PANEL, 22, this));
-      if (ThemeCatalog.cinematic(id)) {
-        art.addView(new ThemeTile(this, id), new FrameLayout.LayoutParams(-1, -1));
-      } else {
-        art.addView(new WallpaperView(this, id), new FrameLayout.LayoutParams(-1, -1));
-        TextView sample = Ui.text(this, "9:41", 40, Color.WHITE);
-        sample.setTypeface(
-            Typeface.create(
-                ThemeCatalog.family(id) == 1 ? "serif" : "sans-serif-thin", Typeface.NORMAL));
-        sample.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        sample.setPadding(0, dp(24), 0, 0);
-        art.addView(sample, new FrameLayout.LayoutParams(-1, -1));
-      }
+      art.addView(new ThemeTile(this, id), new FrameLayout.LayoutParams(-1, -1));
       TextView favorite = Ui.bold(this, prefs.favorite(id) ? "♥" : "♡", 20, Color.WHITE);
       favorite.setGravity(Gravity.CENTER);
       favorite.setBackground(Ui.rounded(0x40000000, 22, this));
@@ -314,15 +336,18 @@ public final class MainActivity extends Activity {
           new FrameLayout.LayoutParams(dp(44), dp(44), Gravity.BOTTOM | Gravity.END);
       fp.setMargins(0, 0, dp(8), dp(8));
       art.addView(favorite, fp);
-      art.setContentDescription("Select " + ThemeCatalog.NAMES[id] + " wallpaper");
-      art.setOnClickListener(
-          v -> {
-            ThemeCatalog.apply(prefs, id);
-            refresh();
-            toast(ThemeCatalog.NAMES[id] + " theme applied. Customize it in the editor.");
-          });
+      art.setContentDescription("Preview " + ThemeCatalog.NAMES[id] + " theme");
+      art.setOnClickListener(v -> openTheme(id, choices));
       art.setFocusable(true);
-      tile.addView(art, new LinearLayout.LayoutParams(-1, dp(300)));
+      android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
+      float aspect =
+          Math.max(metrics.widthPixels, metrics.heightPixels)
+              / (float) Math.min(metrics.widthPixels, metrics.heightPixels);
+      int tileHeight =
+          Math.max(
+              260,
+              Math.min(420, Math.round((metrics.widthPixels / metrics.density - 60) / 2 * aspect)));
+      tile.addView(art, new LinearLayout.LayoutParams(-1, dp(tileHeight)));
       Ui.space(tile, 8);
       tile.addView(
           Ui.bold(
@@ -382,7 +407,7 @@ public final class MainActivity extends Activity {
       Preferences snapshot = new Preferences(this, "luma_preview_" + look.id);
       snapshot.design(look.design);
       FrameLayout art = new RoundedFrameLayout(this, 20);
-      art.addView(new LockFace(this, true, snapshot), new FrameLayout.LayoutParams(-1, -1));
+      art.addView(new PortraitPreview(this, snapshot), new FrameLayout.LayoutParams(-1, -1));
       card.addView(art, new LinearLayout.LayoutParams(-1, dp(245)));
       Ui.space(card, 12);
       card.addView(Ui.bold(this, look.name, 18, Ui.TEXT));
@@ -641,12 +666,8 @@ public final class MainActivity extends Activity {
       WallpaperView art = new WallpaperView(this, i);
       art.setBackground(Ui.rounded(Ui.PANEL, 16, this));
       art.setClipToOutline(true);
-      art.setContentDescription("Select " + Preferences.WALLPAPERS[i] + " wallpaper");
-      art.setOnClickListener(
-          v -> {
-            ThemeCatalog.apply(prefs, index);
-            refresh();
-          });
+      art.setContentDescription("Preview " + Preferences.WALLPAPERS[i] + " theme");
+      art.setOnClickListener(v -> openTheme(index, ThemeCatalog.FEATURED));
       art.setFocusable(true);
       tile.addView(art, new LinearLayout.LayoutParams(dp(90), dp(112)));
       Ui.space(tile, 7);

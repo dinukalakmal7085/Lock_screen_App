@@ -1,12 +1,12 @@
-# Phone test: 1.2.0-beta.1
+# Phone test: 1.2.1-beta.1
 
 Start with [Studio](https://github.com/dinukalakmal7085/Lock_screen_App/raw/refs/heads/main/downloads/Luma-studio.apk) to review the design. Use the [full edition](https://github.com/dinukalakmal7085/Lock_screen_App/raw/refs/heads/main/downloads/Luma-debug.apk) to test automatic display if Android permits installation. These editions replace each other and preserve appearance data. Keep Play Protect enabled. Neither APK is a Play Store release.
 
 ## Design pass
 
-1. Open **Wallpapers → Cinematic** and select **Abyss**, then **Cloudwalker**. Open **Edit this look** and try all seven clocks, including **Glass XL**, colors, size and vertical position. Confirm the clock stays readable with **Depth** on/off.
+1. Open **Wallpapers → Cinematic** and select **Abyss**, then **Cloudwalker**. Compare **Clear**, **Frosted** and **Solid** in the preview; use the arrows to browse without applying. Open **Customize** and try all seven clocks, including **Glass XL**, colors, size and vertical position. Confirm the clock stays readable with **Depth** on/off.
 2. Cinematic presets start with a clean face and no widgets. Set the four widget slots to Battery, Calendar, Alarm and Focus. Enter a focus phrase. Set a real alarm in your clock app and compare its time. Save with a name.
-3. Open **Saved**, switch to another theme and restore the named look. Confirm its clock, widgets, photo composition and depth return. Delete a disposable look.
+3. Back out of a theme preview and confirm your active look stays intact. Use **Use theme** and confirm only that explicit action applies it. Rotate with a preview draft and a filtered gallery open; the draft and filters should survive. Open **Saved**, switch to another theme and restore the named look. Confirm its clock, widgets, photo composition and depth return. Delete a disposable look.
 4. Change an editor draft and tap Cancel. Confirm the active design was not changed. Rotate while editing and check the draft survives.
 5. Choose a portrait camera photo. Check orientation, zoom, position and shade. Optional photo depth requires a transparent PNG of the same image canvas; an opaque image should be rejected with an explanation. Confirm saved photo looks remain usable after importing another photo.
 6. Preview and hold the screen to switch looks. Apply the background to Android's lock screen. The system's own clock remains; this is expected, especially in Studio.

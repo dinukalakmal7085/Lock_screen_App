@@ -178,17 +178,21 @@ public class EditorTest {
         Robolectric.buildActivity(MainActivity.class).setup()) {
       find(c.get(), "Wallpapers tab").performClick();
       ((EditText) find(c.get(), "Search themes")).setText("Alpine");
-      assertNotNull(find(c.get(), "Select Alpine wallpaper"));
-      assertNull(find(c.get(), "Select Iris wallpaper"));
+      assertNotNull(find(c.get(), "Preview Alpine theme"));
+      assertNull(find(c.get(), "Preview Iris theme"));
     }
   }
 
   @Test
   public void themeSwitchGalleryIsAnActualActivity() {
+    new Preferences(context).setNumber("clockWidth", 60);
+    new Preferences(context).setNumber("glassFinish", 2);
     try (ActivityController<SwitcherActivity> c =
         Robolectric.buildActivity(SwitcherActivity.class).setup()) {
       find(c.get(), "Use Alpine lock screen").performClick();
       assertEquals(6, new Preferences(context).wallpaper());
+      assertEquals(100, new Preferences(context).number("clockWidth", 100));
+      assertEquals(1, new Preferences(context).number("glassFinish", 1));
       assertTrue(c.get().isFinishing());
     }
   }

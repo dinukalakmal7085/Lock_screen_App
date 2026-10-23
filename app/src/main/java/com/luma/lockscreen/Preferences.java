@@ -9,6 +9,7 @@ public final class Preferences {
   public static final String[] CLOCKS = {
     "Liquid", "Classic", "Outline", "Stacked", "Editorial", "Mono", "Glass XL"
   };
+  public static final String[] GLASS_FINISHES = {"Clear", "Frosted", "Solid"};
   public static final int[] INKS = {
     0xFFFDFBFF, 0xFFFFE8BF, 0xFFA8F0D6, 0xFFB7DAFF, 0xFFFFC2D1, 0xFFD5C1FF, 0xFF1A2330, 0xFFF8AF72
   };
@@ -19,6 +20,8 @@ public final class Preferences {
     "foregroundFile",
     "clock",
     "clockSize",
+    "clockWidth",
+    "glassFinish",
     "clockOffset",
     "ink",
     "alignment",

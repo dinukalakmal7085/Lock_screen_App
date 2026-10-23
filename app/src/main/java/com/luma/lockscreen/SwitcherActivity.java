@@ -51,7 +51,7 @@ public final class SwitcherActivity extends Activity {
           ThemeCatalog.NAMES[id],
           p,
           () -> {
-            ThemeCatalog.apply(current, id);
+            current.copyDesign(p);
             finish();
           });
     }
@@ -76,7 +76,7 @@ public final class SwitcherActivity extends Activity {
     LinearLayout card = Ui.column(this);
     card.setPadding(0, 0, Ui.dp(this, 14), 0);
     FrameLayout face = new RoundedFrameLayout(this, 30);
-    face.addView(new LockFace(this, true, p), new FrameLayout.LayoutParams(-1, -1));
+    face.addView(new PortraitPreview(this, p), new FrameLayout.LayoutParams(-1, -1));
     face.setOnClickListener(v -> action.run());
     face.setContentDescription("Use " + name + " lock screen");
     card.addView(face, new LinearLayout.LayoutParams(Ui.dp(this, 260), Ui.dp(this, 360)));

@@ -18,7 +18,7 @@ public final class LockFace extends FrameLayout {
   private final boolean miniature;
   private final Handler handler = new Handler(Looper.getMainLooper());
   private final LinearLayout widgets, notifications;
-  private final TextView date;
+  private final TextView date, hint;
   public final TextClock clock;
   public final WallpaperView wallpaper;
   private final Runnable refresh =
@@ -38,10 +38,14 @@ public final class LockFace extends FrameLayout {
   }
 
   LockFace(Context c, boolean small, Preferences preferences) {
+    this(c, small, preferences, 1800);
+  }
+
+  LockFace(Context c, boolean small, Preferences preferences, int artworkLimit) {
     super(c);
     prefs = preferences;
     miniature = small;
-    wallpaper = new WallpaperView(c, prefs.wallpaper()).config(prefs);
+    wallpaper = new WallpaperView(c, prefs.wallpaper()).config(prefs).artworkLimit(artworkLimit);
     if (prefs.flag("photo", false)) wallpaper.loadPhoto();
     addView(wallpaper, new LayoutParams(-1, -1));
     LinearLayout top = Ui.column(c);
@@ -103,8 +107,7 @@ public final class LockFace extends FrameLayout {
     LayoutParams np = new LayoutParams(-1, -2, Gravity.BOTTOM);
     np.setMargins(Ui.dp(c, 18), 0, Ui.dp(c, 18), Ui.dp(c, small ? 44 : 124));
     addView(notifications, np);
-    TextView hint =
-        Ui.text(c, small ? "LIVE PREVIEW" : "Swipe up to unlock", small ? 9 : 13, 0xEEFFFFFF);
+    hint = Ui.text(c, small ? "LIVE PREVIEW" : "Swipe up to unlock", small ? 9 : 13, 0xEEFFFFFF);
     hint.setGravity(Gravity.CENTER);
     hint.setLetterSpacing(small ? .12f : .02f);
     LayoutParams hp = new LayoutParams(-1, -2, Gravity.BOTTOM);
@@ -112,6 +115,10 @@ public final class LockFace extends FrameLayout {
     addView(hint, hp);
     refreshData();
     setContentDescription("Live lock screen with " + prefs.wallpaperName() + " wallpaper");
+  }
+
+  void hideHint() {
+    hint.setVisibility(GONE);
   }
 
   void refreshData() {

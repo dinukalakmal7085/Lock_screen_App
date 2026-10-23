@@ -21,6 +21,7 @@ final class GlassClock extends TextClock {
   private BitmapShader shader;
   private String drawnText = "";
   private int drawnWidth, drawnHeight, drawnStyle = -1;
+  private final int finish;
 
   public GlassClock(Context c) {
     this(c, new Preferences(c), new WallpaperView(c));
@@ -30,8 +31,11 @@ final class GlassClock extends TextClock {
     super(c);
     prefs = p;
     source = wallpaper;
+    finish = Math.max(0, Math.min(2, p.number("glassFinish", 1)));
     material.setColorFilter(
-        new PorterDuffColorFilter((p.ink() & 0xffffff) | 0x55000000, PorterDuff.Mode.SRC_ATOP));
+        new PorterDuffColorFilter(
+            (p.ink() & 0xffffff) | (finish == 0 ? 0x22000000 : 0x55000000),
+            PorterDuff.Mode.SRC_ATOP));
   }
 
   @Override
@@ -47,18 +51,24 @@ final class GlassClock extends TextClock {
       return;
     }
     updateGlyphs(style);
-    ensureTexture();
-    matrix.setScale(
-        source.getWidth() / (float) texture.getWidth(),
-        source.getHeight() / (float) texture.getHeight());
-    matrix.postTranslate(
-        -getLeft() + Ui.dp(getContext(), 9),
-        -getTop() - ((android.view.View) getParent()).getTop() + Ui.dp(getContext(), 6));
-    shader.setLocalMatrix(matrix);
-    material.setShader(shader);
+    if (finish == 2) {
+      material.setShader(null);
+      material.setColorFilter(null);
+      material.setColor(prefs.ink());
+    } else {
+      ensureTexture();
+      matrix.setScale(
+          source.getWidth() / (float) texture.getWidth(),
+          source.getHeight() / (float) texture.getHeight());
+      matrix.postTranslate(
+          -getLeft() + Ui.dp(getContext(), 9),
+          -getTop() - ((android.view.View) getParent()).getTop() + Ui.dp(getContext(), 6));
+      shader.setLocalMatrix(matrix);
+      material.setShader(shader);
+    }
     material.setStyle(Paint.Style.FILL);
     canvas.drawPath(glyphs, material);
-    canvas.drawPath(glyphs, gloss);
+    if (finish != 2) canvas.drawPath(glyphs, gloss);
     rim.setShader(null);
     rim.setColor(0x40070D18);
     rim.setStyle(Paint.Style.STROKE);
@@ -94,6 +104,7 @@ final class GlassClock extends TextClock {
         style == 6 ? getHeight() * .90f : Math.min(getHeight() * .84f, getTextSize() * .80f);
     float width =
         style == 6 ? available : Math.min(available, bounds.width() * height / bounds.height());
+    width *= Math.max(60, Math.min(100, prefs.number("clockWidth", 100))) / 100f;
     int align = prefs.number("alignment", 1);
     float left = align == 0 ? 0 : align == 2 ? getWidth() - width : (getWidth() - width) / 2;
     float top = (getHeight() - height) / 2;
@@ -107,7 +118,11 @@ final class GlassClock extends TextClock {
             0,
             getWidth() * .35f,
             getHeight(),
-            new int[] {ink | 0x99000000, ink | 0x20000000, ink | 0x08000000, ink | 0x75000000},
+            finish == 0
+                ? new int[] {ink | 0x55000000, ink | 0x10000000, ink | 0x04000000, ink | 0x33000000}
+                : new int[] {
+                  ink | 0x99000000, ink | 0x20000000, ink | 0x08000000, ink | 0x75000000
+                },
             new float[] {0, .3f, .65f, 1},
             Shader.TileMode.CLAMP));
   }

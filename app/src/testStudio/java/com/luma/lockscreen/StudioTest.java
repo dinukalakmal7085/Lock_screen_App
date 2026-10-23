@@ -92,7 +92,13 @@ public class StudioTest {
   public void wallpaperAndClockChoicesPersistAndPreviewOpens() {
     try (ActivityController<MainActivity> c =
         Robolectric.buildActivity(MainActivity.class).setup()) {
-      findDescription(c.get().getWindow().getDecorView(), "Select Tide wallpaper").performClick();
+      findDescription(c.get().getWindow().getDecorView(), "Preview Tide theme").performClick();
+      try (ActivityController<ThemePreviewActivity> theme =
+          Robolectric.buildActivity(
+                  ThemePreviewActivity.class, shadowOf(c.get()).getNextStartedActivity())
+              .setup()) {
+        findDescription(theme.get().getWindow().getDecorView(), "Use preview theme").performClick();
+      }
       findDescription(c.get().getWindow().getDecorView(), "Outline clock style").performClick();
       c.recreate();
       assertEquals(2, new Preferences(c.get()).wallpaper());

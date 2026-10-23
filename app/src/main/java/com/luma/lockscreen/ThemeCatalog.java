@@ -110,6 +110,8 @@ public final class ThemeCatalog {
       p.setNumber("panX", 0);
       p.setNumber("panY", 0);
       p.setNumber("alignment", 1);
+      p.setNumber("glassFinish", 0);
+      p.setNumber("clockWidth", 100);
     }
     p.clock(cinematic(id) ? 6 : family(id) == 1 ? 4 : family(id) == 4 ? 5 : 0);
     p.setNumber("clockSize", cinematic(id) ? 126 : family(id) == 1 ? 104 : 94);

@@ -27,7 +27,14 @@ public final class EditorActivity extends Activity {
     super.onCreate(saved);
     draft = new Preferences(this, "luma_editor_draft");
     if (saved == null) {
-      draft.copyDesign(new Preferences(this));
+      String themeDesign = getIntent().getStringExtra("themeDesign");
+      if (themeDesign != null) {
+        try {
+          draft.design(new org.json.JSONObject(themeDesign));
+        } catch (org.json.JSONException invalid) {
+          draft.copyDesign(new Preferences(this));
+        }
+      } else draft.copyDesign(new Preferences(this));
       draft.setText("draftName", draft.wallpaperName());
     } else selectedTab = saved.getInt("editorTab", 0);
     LinearLayout root = Ui.column(this);
@@ -155,6 +162,17 @@ public final class EditorActivity extends Activity {
       controls.addView(scroll);
       space(14);
       slider("Clock size", "clockSize", 54, 126, 94);
+      if (draft.clock() == 0 || draft.clock() == 6) {
+        slider("Clock width", "clockWidth", 60, 100, 100);
+        choices(
+            "Glass finish",
+            Preferences.GLASS_FINISHES,
+            draft.number("glassFinish", 1),
+            value -> {
+              draft.setNumber("glassFinish", value);
+              refreshPreview();
+            });
+      }
       slider("Vertical position", "clockOffset", 0, 100, 0);
       choices(
           "Alignment",

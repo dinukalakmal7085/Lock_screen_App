@@ -109,8 +109,8 @@ public class CinematicTest {
         Robolectric.buildActivity(MainActivity.class).setup().visible()) {
       find(c.get().getWindow().getDecorView(), "Wallpapers tab").performClick();
       find(c.get().getWindow().getDecorView(), "Cinematic collection").performClick();
-      assertNotNull(find(c.get().getWindow().getDecorView(), "Select Abyss wallpaper"));
-      assertNull(find(c.get().getWindow().getDecorView(), "Select Iris wallpaper"));
+      assertNotNull(find(c.get().getWindow().getDecorView(), "Preview Abyss theme"));
+      assertNull(find(c.get().getWindow().getDecorView(), "Preview Iris theme"));
       capture(c.get(), "cinematic-gallery");
     }
     for (int id : new int[] {32, 33, 34, 35, 36, 37, 38, 39, 40}) {

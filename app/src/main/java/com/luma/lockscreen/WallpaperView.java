@@ -18,7 +18,7 @@ public final class WallpaperView extends View {
   private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
   private int theme;
   private Bitmap photo, foreground, bundled;
-  private int bundledWidth;
+  private int bundledWidth, artworkLimit = 1800;
   private final Path subject = new Path();
   private Preferences config;
 
@@ -33,6 +33,11 @@ public final class WallpaperView extends View {
 
   public WallpaperView config(Preferences p) {
     config = p;
+    return this;
+  }
+
+  WallpaperView artworkLimit(int pixels) {
+    artworkLimit = Math.max(320, pixels);
     return this;
   }
 
@@ -61,7 +66,8 @@ public final class WallpaperView extends View {
     o.inJustDecodeBounds = true;
     BitmapFactory.decodeFile(f.getPath(), o);
     o.inSampleSize = 1;
-    while (Math.max(o.outWidth, o.outHeight) / o.inSampleSize > 1800) o.inSampleSize *= 2;
+    while (Math.max(o.outWidth, o.outHeight) / o.inSampleSize > (artworkLimit <= 480 ? 1200 : 1800))
+      o.inSampleSize *= 2;
     o.inJustDecodeBounds = false;
     return BitmapFactory.decodeFile(f.getPath(), o);
   }
@@ -326,6 +332,7 @@ public final class WallpaperView extends View {
   }
 
   private Bitmap bundled(int width) {
+    width = Math.min(width, artworkLimit);
     if (bundled == null || (width > 480 && bundledWidth <= 480)) {
       bundled = ThemeAssets.bitmap(getContext(), theme, width);
       bundledWidth = width;
