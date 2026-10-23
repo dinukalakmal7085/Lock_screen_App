@@ -2,6 +2,14 @@
 
 A native, offline Android lock-screen personalizer with original liquid-glass artwork. Built from an empty repository using the requested glass-style lock-screen concept; no assets or source were copied from the linked Play Store app.
 
+## Download and install
+
+[Download Luma for Android](https://github.com/dinukalakmal7085/Lock_screen_App/raw/refs/heads/main/downloads/Luma-debug.apk)
+
+Open the link on your Android phone, download `Luma-debug.apk`, then open the downloaded file to install it. Android may ask you to allow installation from your browser. Requires Android 8.0 or newer. This is the tested development build, signed with a debug certificate.
+
+If the direct link does not download, open [the APK file on GitHub](https://github.com/dinukalakmal7085/Lock_screen_App/blob/main/downloads/Luma-debug.apk) and select **Download raw file**. Sign in to GitHub if the repository is private. The APK's SHA-256 checksum is in [downloads/SHA256SUMS.txt](downloads/SHA256SUMS.txt).
+
 ## Features
 
 - Studio with a live clock and full-screen preview.
