@@ -7,19 +7,10 @@ import java.util.*;
 
 /** Opt-in, in-memory summaries only. Sensitive notification contents are never displayed. */
 public final class LumaNotificationListener extends NotificationListenerService {
-  public static final class Entry {
-    public final String app, title;
+  private static final Map<String, NotificationSummary> active = new LinkedHashMap<>();
 
-    Entry(String app, String title) {
-      this.app = app;
-      this.title = title;
-    }
-  }
-
-  private static final Map<String, Entry> active = new LinkedHashMap<>();
-
-  public static synchronized List<Entry> entries() {
-    List<Entry> result = new ArrayList<>(active.values());
+  public static synchronized List<NotificationSummary> entries() {
+    List<NotificationSummary> result = new ArrayList<>(active.values());
     Collections.reverse(result);
     return result.subList(0, Math.min(3, result.size()));
   }
@@ -52,7 +43,7 @@ public final class LumaNotificationListener extends NotificationListenerService 
     String safeTitle =
         n.visibility == Notification.VISIBILITY_PUBLIC ? String.valueOf(title) : "New notification";
     synchronized (LumaNotificationListener.class) {
-      active.put(sbn.getKey(), new Entry(label, safeTitle));
+      active.put(sbn.getKey(), new NotificationSummary(label, safeTitle));
     }
   }
 

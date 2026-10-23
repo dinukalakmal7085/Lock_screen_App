@@ -27,6 +27,11 @@ public final class MainActivity extends Activity {
   public void onCreate(Bundle saved) {
     super.onCreate(saved);
     prefs = new Preferences(this);
+    if (!EditionFeatures.HAS_COMPANION) {
+      prefs.setFlag("enabled", false);
+      prefs.setFlag("notifications", false);
+      prefs.setFlag("details", false);
+    }
     if (saved != null) tab = saved.getInt("tab", 0);
     render();
   }
@@ -178,8 +183,11 @@ public final class MainActivity extends Activity {
     TextView info =
         Ui.text(
             this,
-            "Wallpaper applies to Android’s lock screen. Use the screen companion for Luma’s clock"
-                + " and widgets.",
+            EditionFeatures.HAS_COMPANION
+                ? "Wallpaper applies to Android’s lock screen. Use the screen companion for Luma’s"
+                    + " clock and widgets."
+                : "Wallpaper applies to Android’s lock screen. Customize the clock and widgets in"
+                    + " Preview; Android keeps its system clock.",
             11,
             Ui.MUTED);
     info.setGravity(Gravity.CENTER);
@@ -260,36 +268,52 @@ public final class MainActivity extends Activity {
     title("Make it personal.");
     subtitle("Little details. Thoughtfully yours.");
     gap(24);
-    LinearLayout companion = panel();
-    companion.addView(Ui.bold(this, "✦   Screen companion", 18, Ui.TEXT));
-    Ui.space(companion, 8);
-    TextView help =
-        Ui.text(
-            this,
-            "Show your Luma face when the screen wakes. Android’s secure lock stays in place; some"
-                + " phones show the companion only after unlocking.",
-            13,
-            Ui.MUTED);
-    help.setLineSpacing(dp(4), 1);
-    companion.addView(help);
-    Ui.space(companion, 16);
-    boolean enabled =
-        prefs.flag("enabled", false)
-            && LockScreenService.isActiveOrStarting()
-            && Settings.canDrawOverlays(this);
-    companion.addView(
-        Ui.button(
-            this,
-            enabled ? "Turn off companion" : "Enable companion",
-            true,
-            () -> {
-              if (enabled) {
-                prefs.setFlag("enabled", false);
-                stopService(new Intent(this, LockScreenService.class));
-                refresh();
-              } else askCompanion();
-            }));
-    body.addView(companion);
+    if (EditionFeatures.HAS_COMPANION) {
+      LinearLayout companion = panel();
+      companion.addView(Ui.bold(this, "✦   Screen companion", 18, Ui.TEXT));
+      Ui.space(companion, 8);
+      TextView help =
+          Ui.text(
+              this,
+              "Show your Luma face when the screen wakes. Android’s secure lock stays in place;"
+                  + " some phones show the companion only after unlocking.",
+              13,
+              Ui.MUTED);
+      help.setLineSpacing(dp(4), 1);
+      companion.addView(help);
+      Ui.space(companion, 16);
+      boolean enabled =
+          prefs.flag("enabled", false)
+              && EditionFeatures.isActive()
+              && Settings.canDrawOverlays(this);
+      companion.addView(
+          Ui.button(
+              this,
+              enabled ? "Turn off companion" : "Enable companion",
+              true,
+              () -> {
+                if (enabled) {
+                  prefs.setFlag("enabled", false);
+                  EditionFeatures.stop(this);
+                  refresh();
+                } else askCompanion();
+              }));
+      body.addView(companion);
+    } else {
+      LinearLayout edition = panel();
+      edition.addView(Ui.bold(this, "✦   Luma Studio", 18, Ui.TEXT));
+      Ui.space(edition, 8);
+      TextView scope =
+          Ui.text(
+              this,
+              "Create your wallpaper and explore clock styles in Preview. Your phone keeps its"
+                  + " system clock and secure unlock.",
+              13,
+              Ui.MUTED);
+      scope.setLineSpacing(dp(4), 1);
+      edition.addView(scope);
+      body.addView(edition);
+    }
     gap(24);
     section("Display", null, null);
     gap(12);
@@ -299,44 +323,46 @@ public final class MainActivity extends Activity {
     display.addView(toggleRow("Battery widget", "Current charge, at a glance", "battery", true));
     body.addView(display);
     gap(24);
-    section("Notifications", null, null);
-    gap(12);
-    LinearLayout nc = panel();
-    boolean access = notificationAccess();
-    nc.addView(
-        Ui.bold(
-            this,
-            access ? "Notification access is on" : "Your notifications, if you choose",
-            14,
-            Ui.TEXT));
-    Ui.space(nc, 7);
-    TextView note =
-        Ui.text(
-            this,
-            "Optional access shows up to three recent notifications. Summaries stay in memory on"
-                + " your phone. Sensitive contents remain hidden while locked.",
-            12,
-            Ui.MUTED);
-    note.setLineSpacing(dp(4), 1);
-    nc.addView(note);
-    Ui.space(nc, 12);
-    nc.addView(
-        Ui.button(
-            this,
-            access ? "Manage Android access  ↗" : "Allow notification access  ↗",
-            false,
-            this::requestNotificationAccess));
-    Ui.space(nc, 10);
-    nc.addView(
-        toggleRow(
-            "Show notifications",
-            "Display recent notifications on your face",
-            "notifications",
-            false));
-    nc.addView(
-        toggleRow("Show public titles", "Only while your device is unlocked", "details", false));
-    body.addView(nc);
-    gap(24);
+    if (EditionFeatures.HAS_COMPANION) {
+      section("Notifications", null, null);
+      gap(12);
+      LinearLayout nc = panel();
+      boolean access = notificationAccess();
+      nc.addView(
+          Ui.bold(
+              this,
+              access ? "Notification access is on" : "Your notifications, if you choose",
+              14,
+              Ui.TEXT));
+      Ui.space(nc, 7);
+      TextView note =
+          Ui.text(
+              this,
+              "Optional access shows up to three recent notifications. Summaries stay in memory on"
+                  + " your phone. Sensitive contents remain hidden while locked.",
+              12,
+              Ui.MUTED);
+      note.setLineSpacing(dp(4), 1);
+      nc.addView(note);
+      Ui.space(nc, 12);
+      nc.addView(
+          Ui.button(
+              this,
+              access ? "Manage Android access  ↗" : "Allow notification access  ↗",
+              false,
+              this::requestNotificationAccess));
+      Ui.space(nc, 10);
+      nc.addView(
+          toggleRow(
+              "Show notifications",
+              "Display recent notifications on your face",
+              "notifications",
+              false));
+      nc.addView(
+          toggleRow("Show public titles", "Only while your device is unlocked", "details", false));
+      body.addView(nc);
+      gap(24);
+    }
     section("About Luma", null, null);
     gap(12);
     LinearLayout about = panel();
@@ -347,10 +373,13 @@ public final class MainActivity extends Activity {
             this,
             "No account. No ads. No tracking.\n"
                 + "Your photos and preferences stay on your device.\n\n"
-                + "Luma never replaces your PIN or biometrics. The companion needs"
-                + " display-over-other-apps access and a visible ongoing notification. Android and"
-                + " manufacturer battery settings can limit it. Enable it again after restarting"
-                + " your phone.",
+                + (EditionFeatures.HAS_COMPANION
+                    ? "Luma never replaces your PIN or biometrics. The companion needs"
+                        + " display-over-other-apps access and a visible ongoing notification."
+                        + " Android and manufacturer battery settings can limit it. Enable it"
+                        + " again after restarting your phone."
+                    : "Luma Studio changes your wallpaper and previews your design. It has no"
+                        + " notification reading, overlay access, or background service."),
             12,
             Ui.MUTED);
     privacy.setLineSpacing(dp(4), 1);
@@ -365,8 +394,10 @@ public final class MainActivity extends Activity {
                 new AlertDialog.Builder(this)
                     .setTitle("Start fresh?")
                     .setMessage(
-                        "Reset wallpaper, clock, and widgets. Your companion and permission"
-                            + " settings will stay as they are.")
+                        EditionFeatures.HAS_COMPANION
+                            ? "Reset wallpaper, clock, and widgets. Your companion and permission"
+                                + " settings will stay as they are."
+                            : "Reset wallpaper, clock, and preview widgets?")
                     .setNegativeButton("Keep it", null)
                     .setPositiveButton(
                         "Reset",
@@ -381,7 +412,7 @@ public final class MainActivity extends Activity {
                     .show()));
     body.addView(about);
     gap(16);
-    TextView version = Ui.text(this, "LUMA  /  VERSION 1.0", 10, Ui.MUTED);
+    TextView version = Ui.text(this, "LUMA  /  VERSION " + BuildConfig.VERSION_NAME, 10, Ui.MUTED);
     version.setLetterSpacing(.16f);
     version.setGravity(Gravity.CENTER);
     body.addView(version);
@@ -639,7 +670,10 @@ public final class MainActivity extends Activity {
         .setTitle("Apply to your lock screen?")
         .setMessage(
             "This sets the wallpaper background. Android keeps its own clock and secure unlock."
-                + " Luma’s full design is available in Preview and the optional screen companion.")
+                + (EditionFeatures.HAS_COMPANION
+                    ? " Luma’s full design is available in Preview and the optional screen"
+                        + " companion."
+                    : " Luma’s clock and widgets are available in Preview."))
         .setNegativeButton("Cancel", null)
         .setPositiveButton(
             "Apply wallpaper",
@@ -683,6 +717,7 @@ public final class MainActivity extends Activity {
   }
 
   private void askCompanion() {
+    if (!EditionFeatures.HAS_COMPANION) return;
     new AlertDialog.Builder(this)
         .setTitle("Enable screen companion?")
         .setMessage(
@@ -710,6 +745,7 @@ public final class MainActivity extends Activity {
   }
 
   private void enableCompanion() {
+    if (!EditionFeatures.HAS_COMPANION) return;
     if (Build.VERSION.SDK_INT >= 33
         && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
             != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -718,7 +754,7 @@ public final class MainActivity extends Activity {
     }
     prefs.setFlag("enabled", true);
     try {
-      LockScreenService.requestStart(this);
+      EditionFeatures.start(this);
       toast("Companion enabled. Wake your screen to try it.");
     } catch (RuntimeException e) {
       prefs.setFlag("enabled", false);
@@ -738,15 +774,11 @@ public final class MainActivity extends Activity {
   }
 
   private boolean notificationAccess() {
-    String listeners =
-        Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-    if (listeners == null) return false;
-    String own = new ComponentName(this, LumaNotificationListener.class).flattenToString();
-    for (String value : listeners.split(":")) if (value.equals(own)) return true;
-    return false;
+    return EditionFeatures.notificationAccess(this);
   }
 
   private void requestNotificationAccess() {
+    if (!EditionFeatures.HAS_COMPANION) return;
     new AlertDialog.Builder(this)
         .setTitle("Show your notifications?")
         .setMessage(

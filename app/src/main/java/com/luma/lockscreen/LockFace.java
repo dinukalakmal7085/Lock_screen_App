@@ -108,8 +108,8 @@ public final class LockFace extends FrameLayout {
     battery.setText(value < 0 ? "BATTERY" : "◉  " + value + "%  ·  Battery");
     battery.setVisibility(prefs.flag("battery", true) ? VISIBLE : GONE);
     notifications.removeAllViews();
-    if (prefs.flag("notifications", false) && !miniature) {
-      for (LumaNotificationListener.Entry e : LumaNotificationListener.entries()) {
+    if (EditionFeatures.HAS_COMPANION && prefs.flag("notifications", false) && !miniature) {
+      for (NotificationSummary e : EditionFeatures.summaries()) {
         LinearLayout card = Ui.column(getContext());
         card.setPadding(
             Ui.dp(getContext(), 16),

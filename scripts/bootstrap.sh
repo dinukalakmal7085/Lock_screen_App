@@ -46,4 +46,5 @@ sdk_license_status=${PIPESTATUS[1]}
 set -o pipefail
 if [[ "$sdk_license_status" != 0 ]]; then cat "$LUMA_TOOLCHAINS/downloads/licenses.log"; exit "$sdk_license_status"; fi
 "$sdkmanager" "--sdk_root=$ANDROID_HOME" "${proxy_args[@]}" 'platforms;android-35' 'build-tools;35.0.0' platform-tools
-gradle --no-daemon --console=plain assembleDebug testDebugUnitTest lintDebug
+gradle --no-daemon --console=plain assembleFullDebug assembleStudioDebug testFullDebugUnitTest testStudioDebugUnitTest lintFullDebug lintStudioDebug
+python3 scripts/verify_apks.py
