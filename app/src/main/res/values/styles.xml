@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppThemeBase" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#0E0E15</item>
+        <item name="android:navigationBarColor">#0E0E15</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:colorAccent">#C9B5FF</item>
+        <item name="android:windowBackground">#0E0E15</item>
+    </style>
+    <style name="AppTheme" parent="AppThemeBase" />
+    <string name="app_name">Luma</string>
+</resources>

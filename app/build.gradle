@@ -1,0 +1,38 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.luma.lockscreen'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.luma.lockscreen'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            def testHome = rootProject.file('.local/test-home')
+            systemProperty 'user.home', testHome.absolutePath
+            doFirst { testHome.mkdirs() }
+            systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
+            ['https.proxyHost', 'https.proxyPort', 'http.proxyHost', 'http.proxyPort',
+             'http.nonProxyHosts', 'javax.net.ssl.trustStore'].each { key ->
+                if (System.getProperty(key)) systemProperty key, System.getProperty(key)
+            }
+        }
+    }
+    lint { abortOnError true }
+}
+
+dependencies {
+    implementation 'androidx.exifinterface:exifinterface:1.4.1'
+    compileOnly 'androidx.annotation:annotation:1.8.1'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+}
