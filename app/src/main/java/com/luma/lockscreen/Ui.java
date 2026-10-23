@@ -12,6 +12,18 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 final class Ui {
+  static void systemInsets(View view) {
+    if (android.os.Build.VERSION.SDK_INT >= 30)
+      view.setOnApplyWindowInsetsListener(
+          (v, insets) -> {
+            android.graphics.Insets bars =
+                insets.getInsets(android.view.WindowInsets.Type.systemBars());
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return insets;
+          });
+    else view.setFitsSystemWindows(true);
+  }
+
   static final int BG = Color.rgb(14, 14, 21),
       PANEL = Color.rgb(26, 26, 37),
       TEXT = Color.rgb(247, 245, 255),

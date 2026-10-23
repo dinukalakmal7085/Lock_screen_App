@@ -2,13 +2,14 @@ plugins { id 'com.android.application' }
 
 android {
     namespace 'com.luma.lockscreen'
-    compileSdk 35
+    compileSdk 36
+    buildToolsVersion '36.0.0'
     defaultConfig {
         applicationId 'com.luma.lockscreen'
         minSdk 26
-        targetSdk 35
-        versionCode 2
-        versionName '1.0.1'
+        targetSdk 36
+        versionCode 3
+        versionName '1.1.0-beta.1'
     }
     flavorDimensions += 'edition'
     productFlavors {
@@ -23,6 +24,29 @@ android {
         }
     }
     buildFeatures { buildConfig true }
+    def signingNames = ['LUMA_UPLOAD_KEYSTORE_PATH','LUMA_UPLOAD_KEY_ALIAS','LUMA_UPLOAD_STORE_PASSWORD','LUMA_UPLOAD_KEY_PASSWORD']
+    def signingReady = signingNames.every { System.getenv(it) }
+    if (signingNames.any { System.getenv(it) } && !signingReady) {
+        throw new GradleException('Incomplete upload-key configuration. Set all four LUMA_UPLOAD_* variables securely; never commit credentials.')
+    }
+    if (signingReady) {
+        signingConfigs {
+            upload {
+                storeFile file(System.getenv('LUMA_UPLOAD_KEYSTORE_PATH'))
+                keyAlias System.getenv('LUMA_UPLOAD_KEY_ALIAS')
+                storePassword System.getenv('LUMA_UPLOAD_STORE_PASSWORD')
+                keyPassword System.getenv('LUMA_UPLOAD_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (signingReady) signingConfig signingConfigs.upload
+        }
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -47,5 +71,5 @@ dependencies {
     implementation 'androidx.exifinterface:exifinterface:1.4.1'
     compileOnly 'androidx.annotation:annotation:1.8.1'
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.robolectric:robolectric:4.14.1'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
 }

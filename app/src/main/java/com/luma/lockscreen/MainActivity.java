@@ -4,7 +4,6 @@ import android.Manifest;
 import android.app.*;
 import android.content.*;
 import android.graphics.*;
-import android.net.Uri;
 import android.os.*;
 import android.provider.Settings;
 import android.view.*;
@@ -19,6 +18,7 @@ public final class MainActivity extends Activity {
   private LinearLayout root, body;
   private ScrollView scroll;
   private int tab, restoreScroll;
+  private String themeQuery = "", themeCollection = "All";
   private boolean awaitingOverlay, applying;
   private final ExecutorService io = Executors.newSingleThreadExecutor();
   private static final int PHOTO = 10, NOTIFICATIONS = 11;
@@ -47,8 +47,13 @@ public final class MainActivity extends Activity {
     super.onResume();
     if (awaitingOverlay) {
       awaitingOverlay = false;
-      if (Settings.canDrawOverlays(this)) enableCompanion();
-      else toast("Display permission wasn't enabled. Preview still works.");
+      if (EditionFeatures.accessGranted(this)) {
+        prefs.setFlag("enabled", true);
+        toast("Lock-screen access is enabled.");
+      } else {
+        prefs.setFlag("enabled", false);
+        toast("Lock-screen access wasn't enabled. Preview still works.");
+      }
     }
     if (root != null) refresh();
   }
@@ -108,6 +113,7 @@ public final class MainActivity extends Activity {
     root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
     if (tab == 0) studio();
     else if (tab == 1) wallpapers();
+    else if (tab == 2) library();
     else settings();
     root.addView(navigation());
     setContentView(root);
@@ -116,7 +122,7 @@ public final class MainActivity extends Activity {
   }
 
   private void studio() {
-    eyebrow("LOCK SCREEN STUDIO");
+    eyebrow("YOUR LOCK SCREEN, REIMAGINED");
     title("A little more you.");
     subtitle("A fresh look. Every time you wake up.");
     gap(22);
@@ -160,7 +166,12 @@ public final class MainActivity extends Activity {
     weighted(actions, Ui.button(this, "Customize", true, this::customize), true);
     weighted(actions, Ui.button(this, "Full preview  ↗", false, this::preview), false);
     body.addView(actions);
-    gap(26);
+    gap(12);
+    TextView details = Ui.text(this, "PHOTO DEPTH  ·  4 WIDGETS  ·  6 CLOCK STYLES", 9, Ui.MUTED);
+    details.setGravity(Gravity.CENTER);
+    details.setLetterSpacing(.08f);
+    body.addView(details);
+    gap(24);
     section("Find your mood", "View all  →", () -> switchTab(1));
     gap(13);
     wallpaperStrip();
@@ -197,70 +208,225 @@ public final class MainActivity extends Activity {
 
   private void wallpapers() {
     eyebrow("THE COLLECTION");
-    title("Set the mood.");
-    subtitle("Original artwork. A screen that feels like you.");
-    gap(22);
-    TextView importPhoto = Ui.button(this, "＋   Choose a photo", false, this::pickPhoto);
-    body.addView(importPhoto);
-    gap(22);
-    for (int row = 0; row < 3; row++) {
-      LinearLayout line = Ui.row(this);
-      line.setGravity(Gravity.TOP);
-      for (int col = 0; col < 2; col++) {
-        final int index = row * 2 + col;
-        LinearLayout tile = Ui.column(this);
-        FrameLayout art = new RoundedFrameLayout(this, 22);
-        art.setBackground(Ui.rounded(Ui.PANEL, 22, this));
-        art.setClipToOutline(true);
-        art.addView(new WallpaperView(this, index), new FrameLayout.LayoutParams(-1, -1));
-        TextView sample = Ui.text(this, "9:41", 38, Color.WHITE);
-        sample.setTypeface(Typeface.create("sans-serif-thin", Typeface.NORMAL));
-        sample.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        sample.setPadding(0, dp(30), 0, 0);
-        art.addView(sample, new FrameLayout.LayoutParams(-1, -1));
-        if (index == prefs.wallpaper() && !prefs.flag("photo", false)) {
-          TextView check = Ui.bold(this, "✓", 15, Ui.BG);
-          check.setGravity(Gravity.CENTER);
-          check.setBackground(Ui.rounded(Ui.ACCENT, 20, this));
-          FrameLayout.LayoutParams ck =
-              new FrameLayout.LayoutParams(dp(27), dp(27), Gravity.BOTTOM | Gravity.END);
-          ck.setMargins(0, 0, dp(10), dp(10));
-          art.addView(check, ck);
-        }
-        art.setContentDescription("Select " + Preferences.WALLPAPERS[index] + " wallpaper");
-        art.setOnClickListener(
-            v -> {
-              prefs.wallpaper(index);
-              refresh();
-              toast(Preferences.WALLPAPERS[index] + " selected");
-            });
-        art.setFocusable(true);
-        tile.addView(art, new LinearLayout.LayoutParams(-1, dp(210)));
-        Ui.space(tile, 10);
-        tile.addView(Ui.bold(this, Preferences.WALLPAPERS[index], 15, Ui.TEXT));
-        Ui.space(tile, 3);
-        tile.addView(
-            Ui.text(
-                this,
-                new String[] {
-                      "Soft violet · Liquid",
-                      "Rose glow · Liquid",
-                      "Ocean air · Liquid",
-                      "Warm light · Liquid",
-                      "Quiet green · Liquid",
-                      "Cool calm · Liquid"
-                    }
-                    [index],
-                10,
-                Ui.MUTED));
-        weighted(line, tile, col == 0);
-      }
-      body.addView(line);
-      gap(22);
+    title("Find your signature.");
+    subtitle("32 original themes. Five moods. Entirely yours.");
+    gap(18);
+    body.addView(Ui.button(this, "＋   Choose a photo", false, this::pickPhoto));
+    gap(14);
+    EditText search = new EditText(this);
+    search.setTextColor(Ui.TEXT);
+    search.setHintTextColor(Ui.MUTED);
+    search.setTextSize(14);
+    search.setSingleLine(true);
+    search.setHint("Search themes");
+    search.setContentDescription("Search themes");
+    search.setText(themeQuery);
+    body.addView(search, new LinearLayout.LayoutParams(-1, dp(48)));
+    HorizontalScrollView filters = new HorizontalScrollView(this);
+    filters.setHorizontalScrollBarEnabled(false);
+    LinearLayout chips = Ui.row(this);
+    for (String collection : ThemeCatalog.COLLECTIONS) {
+      TextView chip =
+          Ui.button(
+              this,
+              collection,
+              themeCollection.equals(collection),
+              () -> {
+                themeCollection = collection;
+                refresh();
+              });
+      chip.setTextSize(11);
+      chip.setMinHeight(dp(42));
+      chip.setContentDescription(collection + " collection");
+      LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+      lp.rightMargin = dp(6);
+      chips.addView(chip, lp);
     }
+    filters.addView(chips);
+    body.addView(filters);
+    gap(18);
+    LinearLayout grid = Ui.column(this);
+    body.addView(grid);
+    renderThemes(grid);
+    search.addTextChangedListener(
+        new android.text.TextWatcher() {
+          public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+          public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+          public void afterTextChanged(android.text.Editable text) {
+            themeQuery = text.toString();
+            renderThemes(grid);
+          }
+        });
+    gap(10);
     body.addView(Ui.button(this, "Preview selected wallpaper  ↗", true, this::preview));
-    gap(12);
+    gap(10);
+    body.addView(Ui.button(this, "Edit this look", false, this::customize));
+    gap(10);
     body.addView(Ui.button(this, "Apply lock wallpaper", false, this::applyWallpaper));
+  }
+
+  private void renderThemes(LinearLayout grid) {
+    grid.removeAllViews();
+    LinearLayout row = null;
+    int visible = 0;
+    for (int i : ThemeCatalog.DISPLAY_ORDER) {
+      if (!ThemeCatalog.NAMES[i]
+          .toLowerCase(java.util.Locale.ROOT)
+          .contains(themeQuery.toLowerCase(java.util.Locale.ROOT))) continue;
+      if (themeCollection.equals("Favorites") && !prefs.favorite(i)) continue;
+      if (!themeCollection.equals("All")
+          && !themeCollection.equals("Favorites")
+          && !ThemeCatalog.collection(i).equals(themeCollection)) continue;
+      if (visible % 2 == 0) {
+        row = Ui.row(this);
+        row.setGravity(Gravity.TOP);
+        grid.addView(row);
+      }
+      final int id = i;
+      LinearLayout tile = Ui.column(this);
+      FrameLayout art = new RoundedFrameLayout(this, 22);
+      art.setBackground(Ui.rounded(Ui.PANEL, 22, this));
+      art.addView(new WallpaperView(this, id), new FrameLayout.LayoutParams(-1, -1));
+      TextView sample = Ui.text(this, "9:41", 40, Color.WHITE);
+      sample.setTypeface(
+          Typeface.create(
+              ThemeCatalog.family(id) == 1 ? "serif" : "sans-serif-thin", Typeface.NORMAL));
+      sample.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+      sample.setPadding(0, dp(24), 0, 0);
+      art.addView(sample, new FrameLayout.LayoutParams(-1, -1));
+      TextView favorite = Ui.bold(this, prefs.favorite(id) ? "♥" : "♡", 20, Color.WHITE);
+      favorite.setGravity(Gravity.CENTER);
+      favorite.setBackground(Ui.rounded(0x40000000, 22, this));
+      favorite.setContentDescription("Favorite " + ThemeCatalog.NAMES[id]);
+      favorite.setOnClickListener(
+          v -> {
+            prefs.favorite(id, !prefs.favorite(id));
+            renderThemes(grid);
+          });
+      FrameLayout.LayoutParams fp =
+          new FrameLayout.LayoutParams(dp(44), dp(44), Gravity.BOTTOM | Gravity.END);
+      fp.setMargins(0, 0, dp(8), dp(8));
+      art.addView(favorite, fp);
+      art.setContentDescription("Select " + ThemeCatalog.NAMES[id] + " wallpaper");
+      art.setOnClickListener(
+          v -> {
+            ThemeCatalog.apply(prefs, id);
+            refresh();
+            toast(ThemeCatalog.NAMES[id] + " theme applied. Customize it in the editor.");
+          });
+      art.setFocusable(true);
+      tile.addView(art, new LinearLayout.LayoutParams(-1, dp(218)));
+      Ui.space(tile, 8);
+      tile.addView(
+          Ui.bold(
+              this,
+              ThemeCatalog.NAMES[id]
+                  + (prefs.wallpaper() == id && !prefs.flag("photo", false) ? "  ✓" : ""),
+              14,
+              Ui.TEXT));
+      tile.addView(
+          Ui.text(
+              this,
+              ThemeCatalog.collection(id) + (ThemeCatalog.family(id) == 1 ? " · Depth" : ""),
+              10,
+              Ui.MUTED));
+      Ui.space(tile, 18);
+      weighted(row, tile, visible % 2 == 0);
+      visible++;
+    }
+    if (visible % 2 == 1) row.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
+    if (visible == 0) {
+      TextView empty =
+          Ui.text(
+              this,
+              themeCollection.equals("Favorites")
+                  ? "Tap a heart to collect your favorite themes."
+                  : "No themes match your search.",
+              14,
+              Ui.MUTED);
+      empty.setPadding(0, dp(28), 0, dp(28));
+      grid.addView(empty);
+    }
+  }
+
+  private void library() {
+    eyebrow("YOUR COLLECTION");
+    title("A look for every you.");
+    subtitle("Save a signature. Switch with a tap.");
+    gap(20);
+    body.addView(Ui.button(this, "＋   Create a look", true, this::customize));
+    gap(22);
+    java.util.List<LookStore.Look> looks = new LookStore(this).all();
+    if (looks.isEmpty()) {
+      LinearLayout empty = panel();
+      empty.addView(Ui.bold(this, "Your story starts here.", 20, Ui.TEXT));
+      Ui.space(empty, 10);
+      empty.addView(
+          Ui.text(
+              this,
+              "Choose a theme, open the editor, and save your first look. Your saved looks stay on"
+                  + " your phone.",
+              13,
+              Ui.MUTED));
+      body.addView(empty);
+    }
+    for (LookStore.Look look : looks) {
+      LinearLayout card = panel();
+      Preferences snapshot = new Preferences(this, "luma_preview_" + look.id);
+      snapshot.design(look.design);
+      FrameLayout art = new RoundedFrameLayout(this, 20);
+      art.addView(new LockFace(this, true, snapshot), new FrameLayout.LayoutParams(-1, -1));
+      card.addView(art, new LinearLayout.LayoutParams(-1, dp(245)));
+      Ui.space(card, 12);
+      card.addView(Ui.bold(this, look.name, 18, Ui.TEXT));
+      Ui.space(card, 12);
+      LinearLayout actions = Ui.row(this);
+      weighted(
+          actions,
+          Ui.button(
+              this,
+              "Use look",
+              true,
+              () -> {
+                new LookStore(this).restore(look.id, prefs);
+                switchTab(0);
+              }),
+          true);
+      weighted(
+          actions,
+          Ui.button(
+              this,
+              "Edit",
+              false,
+              () -> {
+                new LookStore(this).restore(look.id, prefs);
+                customize();
+              }),
+          false);
+      card.addView(actions);
+      Ui.space(card, 8);
+      card.addView(
+          Ui.button(
+              this,
+              "Delete",
+              false,
+              () ->
+                  new AlertDialog.Builder(this)
+                      .setTitle("Delete " + look.name + "?")
+                      .setMessage("This removes the saved look from this phone.")
+                      .setNegativeButton("Keep", null)
+                      .setPositiveButton(
+                          "Delete",
+                          (d, w) -> {
+                            new LookStore(this).delete(look.id);
+                            refresh();
+                          })
+                      .show()));
+      body.addView(card);
+      gap(16);
+    }
   }
 
   private void settings() {
@@ -270,13 +436,13 @@ public final class MainActivity extends Activity {
     gap(24);
     if (EditionFeatures.HAS_COMPANION) {
       LinearLayout companion = panel();
-      companion.addView(Ui.bold(this, "✦   Screen companion", 18, Ui.TEXT));
+      companion.addView(Ui.bold(this, "✦   Your lock-screen experience", 18, Ui.TEXT));
       Ui.space(companion, 8);
       TextView help =
           Ui.text(
               this,
-              "Show your Luma face when the screen wakes. Android’s secure lock stays in place;"
-                  + " some phones show the companion only after unlocking.",
+              "Show your chosen design when your phone wakes. Luma uses optional accessibility"
+                  + " access; Android keeps your PIN and biometrics.",
               13,
               Ui.MUTED);
       help.setLineSpacing(dp(4), 1);
@@ -285,11 +451,11 @@ public final class MainActivity extends Activity {
       boolean enabled =
           prefs.flag("enabled", false)
               && EditionFeatures.isActive()
-              && Settings.canDrawOverlays(this);
+              && EditionFeatures.accessGranted(this);
       companion.addView(
           Ui.button(
               this,
-              enabled ? "Turn off companion" : "Enable companion",
+              enabled ? "Turn off lock screen" : "Set up lock screen",
               true,
               () -> {
                 if (enabled) {
@@ -298,6 +464,24 @@ public final class MainActivity extends Activity {
                   refresh();
                 } else askCompanion();
               }));
+      companion.addView(
+          Ui.button(
+              this,
+              "Enable flashlight shortcut",
+              false,
+              () ->
+                  new AlertDialog.Builder(this)
+                      .setTitle("Enable flashlight control?")
+                      .setMessage(
+                          "Android requires camera permission to control the flashlight. Luma uses"
+                              + " it only for the torch; it does not take pictures. The camera"
+                              + " shortcut opens your camera app.")
+                      .setNegativeButton("Not now", null)
+                      .setPositiveButton(
+                          "Allow",
+                          (d, w) ->
+                              requestPermissions(new String[] {Manifest.permission.CAMERA}, 12))
+                      .show()));
       body.addView(companion);
     } else {
       LinearLayout edition = panel();
@@ -374,10 +558,11 @@ public final class MainActivity extends Activity {
             "No account. No ads. No tracking.\n"
                 + "Your photos and preferences stay on your device.\n\n"
                 + (EditionFeatures.HAS_COMPANION
-                    ? "Luma never replaces your PIN or biometrics. The companion needs"
-                        + " display-over-other-apps access and a visible ongoing notification."
-                        + " Android and manufacturer battery settings can limit it. Enable it"
-                        + " again after restarting your phone."
+                    ? "Your PIN and biometrics stay with Android. Accessibility access displays"
+                        + " your design and observes window state to keep credential prompts and"
+                        + " calls visible. Luma does not retrieve screen text or perform"
+                        + " automated gestures. Notification summaries use separate optional"
+                        + " access."
                     : "Luma Studio changes your wallpaper and previews your design. It has no"
                         + " notification reading, overlay access, or background service."),
             12,
@@ -402,11 +587,8 @@ public final class MainActivity extends Activity {
                     .setPositiveButton(
                         "Reset",
                         (d, w) -> {
-                          prefs.wallpaper(0);
-                          prefs.clock(0);
-                          prefs.setFlag("date", true);
-                          prefs.setFlag("battery", true);
-                          prefs.setFlag("24hour", false);
+                          prefs.design(new org.json.JSONObject());
+                          ThemeCatalog.apply(prefs, 0);
                           refresh();
                         })
                     .show()));
@@ -422,9 +604,9 @@ public final class MainActivity extends Activity {
     LinearLayout nav = Ui.row(this);
     nav.setPadding(dp(14), dp(9), dp(14), dp(9));
     nav.setBackground(Ui.bordered(Ui.BG, 0xFF252430, 0, this));
-    String[] names = {"Studio", "Wallpapers", "Settings"};
-    String[] symbols = {"✦", "▧", "⚙"};
-    for (int i = 0; i < 3; i++) {
+    String[] names = {"Studio", "Wallpapers", "Saved", "Settings"};
+    String[] symbols = {"✦", "▧", "♡", "⚙"};
+    for (int i = 0; i < 4; i++) {
       final int index = i;
       LinearLayout item = Ui.column(this);
       item.setGravity(Gravity.CENTER);
@@ -448,7 +630,7 @@ public final class MainActivity extends Activity {
     HorizontalScrollView hsv = new HorizontalScrollView(this);
     hsv.setHorizontalScrollBarEnabled(false);
     LinearLayout row = Ui.row(this);
-    for (int i = 0; i < 6; i++) {
+    for (int i : ThemeCatalog.FEATURED) {
       final int index = i;
       LinearLayout tile = Ui.column(this);
       WallpaperView art = new WallpaperView(this, i);
@@ -457,7 +639,7 @@ public final class MainActivity extends Activity {
       art.setContentDescription("Select " + Preferences.WALLPAPERS[i] + " wallpaper");
       art.setOnClickListener(
           v -> {
-            prefs.wallpaper(index);
+            ThemeCatalog.apply(prefs, index);
             refresh();
           });
       art.setFocusable(true);
@@ -530,28 +712,7 @@ public final class MainActivity extends Activity {
   }
 
   private void customize() {
-    String[] items = {
-      "Liquid clock",
-      "Classic clock",
-      "Outline clock",
-      "Choose a wallpaper",
-      "Import your photo",
-      "Display & notification settings"
-    };
-    new AlertDialog.Builder(this)
-        .setTitle("Make it yours")
-        .setItems(
-            items,
-            (d, w) -> {
-              if (w < 3) {
-                prefs.clock(w);
-                refresh();
-              } else if (w == 3) switchTab(1);
-              else if (w == 4) pickPhoto();
-              else switchTab(2);
-            })
-        .setNegativeButton("Done", null)
-        .show();
+    startActivity(new Intent(this, EditorActivity.class));
   }
 
   private void preview() {
@@ -574,92 +735,28 @@ public final class MainActivity extends Activity {
   protected void onActivityResult(int req, int result, Intent data) {
     super.onActivityResult(req, result, data);
     if (req != PHOTO || result != RESULT_OK || data == null || data.getData() == null) return;
-    Uri uri = data.getData();
     toast("Importing photo…");
     io.execute(
         () -> {
-          Bitmap bitmap = null;
-          File temp = new File(getFilesDir(), "wallpaper.pending");
           try {
-            BitmapFactory.Options bounds = new BitmapFactory.Options();
-            bounds.inJustDecodeBounds = true;
-            try (InputStream input = getContentResolver().openInputStream(uri)) {
-              BitmapFactory.decodeStream(input, null, bounds);
-            }
-            if (bounds.outWidth < 1 || bounds.outHeight < 1)
-              throw new IOException("This image format couldn't be opened.");
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inSampleSize = 1;
-            while (Math.max(bounds.outWidth, bounds.outHeight) / options.inSampleSize > 2400)
-              options.inSampleSize *= 2;
-            try (InputStream input = getContentResolver().openInputStream(uri)) {
-              bitmap = BitmapFactory.decodeStream(input, null, options);
-            }
-            if (bitmap == null) throw new IOException("Couldn't read this photo.");
-            // Apply image orientation (including mirrored EXIF orientations) before saving.
-            try (InputStream input = getContentResolver().openInputStream(uri)) {
-              androidx.exifinterface.media.ExifInterface exif =
-                  new androidx.exifinterface.media.ExifInterface(input);
-              int orientation =
-                  exif.getAttributeInt(
-                      androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION, 1);
-              Matrix matrix = new Matrix();
-              switch (orientation) {
-                case 2:
-                  matrix.setScale(-1, 1);
-                  break;
-                case 3:
-                  matrix.setRotate(180);
-                  break;
-                case 4:
-                  matrix.setScale(1, -1);
-                  break;
-                case 5:
-                  matrix.setRotate(90);
-                  matrix.postScale(-1, 1);
-                  break;
-                case 6:
-                  matrix.setRotate(90);
-                  break;
-                case 7:
-                  matrix.setRotate(-90);
-                  matrix.postScale(-1, 1);
-                  break;
-                case 8:
-                  matrix.setRotate(-90);
-                  break;
-                default:
-                  break;
-              }
-              Bitmap rotated =
-                  Bitmap.createBitmap(
-                      bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-              if (rotated != bitmap) {
-                bitmap.recycle();
-                bitmap = rotated;
-              }
-            } catch (IOException ignored) {
-              /* Formats without EXIF keep their decoded orientation. */
-            }
-            try (FileOutputStream out = new FileOutputStream(temp)) {
-              if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 92, out))
-                throw new IOException("Couldn't save this photo.");
-            }
-            File target = new File(getFilesDir(), "wallpaper.jpg");
-            if (!temp.renameTo(target)) throw new IOException("Couldn't save this photo.");
+            String filename = PhotoStore.importImage(this, data.getData(), false);
+            prefs.setText("photoFile", filename);
             prefs.setFlag("photo", true);
+            prefs.setText("foregroundFile", "");
+            prefs.setFlag("depth", false);
+            prefs.setNumber("zoom", 100);
+            prefs.setNumber("panX", 0);
+            prefs.setNumber("panY", 0);
+            prefs.setNumber("shade", 18);
             runOnUiThread(
                 () -> {
-                  if (!isFinishing()) {
+                  if (!isFinishing() && !isDestroyed()) {
                     refresh();
-                    toast("Your photo is ready.");
+                    customize();
                   }
                 });
           } catch (IOException | SecurityException | OutOfMemoryError e) {
-            temp.delete();
             runOnUiThread(() -> toast("Couldn't import this photo. Try a smaller JPEG or PNG."));
-          } finally {
-            if (bitmap != null) bitmap.recycle();
           }
         });
   }
@@ -685,7 +782,7 @@ public final class MainActivity extends Activity {
               }
               applying = true;
               refresh();
-              WallpaperView art = new WallpaperView(this, prefs.wallpaper());
+              WallpaperView art = new WallpaperView(this, prefs.wallpaper()).config(prefs);
               if (prefs.flag("photo", false)) art.loadPhoto();
               android.util.DisplayMetrics display = getResources().getDisplayMetrics();
               int width = Math.min(1440, display.widthPixels),
@@ -719,58 +816,27 @@ public final class MainActivity extends Activity {
   private void askCompanion() {
     if (!EditionFeatures.HAS_COMPANION) return;
     new AlertDialog.Builder(this)
-        .setTitle("Enable screen companion?")
+        .setTitle("Enable Luma lock-screen access?")
         .setMessage(
-            "Luma needs permission to display over other apps and keeps a visible notification so"
-                + " you can turn it off. It never replaces Android’s PIN or biometrics. On some"
-                + " phones it appears only after unlocking. No accessibility service is needed.")
-        .setNegativeButton("Maybe later", null)
+            "Luma uses Android Accessibility Service to show your chosen lock screen when the phone"
+                + " wakes and to keep credential prompts and calls visible. It observes window"
+                + " state; it does not retrieve screen text, type, perform automated gestures, or"
+                + " collect app activity. Your PIN and biometrics remain with Android. Notification"
+                + " reading is separate and optional. You can disable this access at any time in"
+                + " Android settings.")
+        .setNegativeButton("Not now", null)
         .setPositiveButton(
-            "Continue",
-            (d, w) -> {
-              if (!Settings.canDrawOverlays(this)) {
-                awaitingOverlay = true;
-                try {
-                  startActivity(
-                      new Intent(
-                          Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                          Uri.parse("package:" + getPackageName())));
-                } catch (ActivityNotFoundException e) {
-                  awaitingOverlay = false;
-                  toast("This phone doesn't support overlay access.");
-                }
-              } else enableCompanion();
+            "Agree & open settings",
+            (dialog, which) -> {
+              awaitingOverlay = true;
+              try {
+                EditionFeatures.start(this);
+              } catch (ActivityNotFoundException e) {
+                awaitingOverlay = false;
+                toast("Accessibility settings aren't available on this device.");
+              }
             })
         .show();
-  }
-
-  private void enableCompanion() {
-    if (!EditionFeatures.HAS_COMPANION) return;
-    if (Build.VERSION.SDK_INT >= 33
-        && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-      requestPermissions(new String[] {Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATIONS);
-      return;
-    }
-    prefs.setFlag("enabled", true);
-    try {
-      EditionFeatures.start(this);
-      toast("Companion enabled. Wake your screen to try it.");
-    } catch (RuntimeException e) {
-      prefs.setFlag("enabled", false);
-      toast("Android couldn't start the companion. Preview is available.");
-    }
-    refresh();
-  }
-
-  @Override
-  public void onRequestPermissionsResult(int req, String[] permissions, int[] results) {
-    super.onRequestPermissionsResult(req, permissions, results);
-    if (req == NOTIFICATIONS) {
-      if (results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED)
-        enableCompanion();
-      else toast("Allow notifications to keep the companion controls visible.");
-    }
   }
 
   private boolean notificationAccess() {

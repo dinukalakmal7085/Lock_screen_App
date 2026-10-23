@@ -15,11 +15,11 @@ if [[ ! -x "$JAVA_HOME/bin/javac" ]]; then
     verify "$LUMA_TOOLCHAINS/downloads/jdk.tar.gz" sha256 d87272944278713fc7a120cf024d2818d136b5debc750aa17045e3c6f045b867
     tar -xzf "$LUMA_TOOLCHAINS/downloads/jdk.tar.gz" -C "$LUMA_TOOLCHAINS"
 fi
-if [[ ! -x "$LUMA_TOOLCHAINS/gradle-8.11.1/bin/gradle" ]]; then
-    fetch https://downloads.gradle.org/distributions/gradle-8.11.1-bin.zip "$LUMA_TOOLCHAINS/downloads/gradle.zip"
-    verify "$LUMA_TOOLCHAINS/downloads/gradle.zip" sha256 f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6
-    unzip -qo "$LUMA_TOOLCHAINS/downloads/gradle.zip" -d "$LUMA_TOOLCHAINS"
-    chmod +x "$LUMA_TOOLCHAINS/gradle-8.11.1/bin/gradle"
+if [[ ! -x "$LUMA_TOOLCHAINS/gradle-8.13/bin/gradle" ]]; then
+    fetch https://downloads.gradle.org/distributions/gradle-8.13-bin.zip "$LUMA_TOOLCHAINS/downloads/gradle-8.13.zip"
+    verify "$LUMA_TOOLCHAINS/downloads/gradle-8.13.zip" sha256 20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78
+    unzip -qo "$LUMA_TOOLCHAINS/downloads/gradle-8.13.zip" -d "$LUMA_TOOLCHAINS"
+    chmod +x "$LUMA_TOOLCHAINS/gradle-8.13/bin/gradle"
 fi
 sdkmanager="$ANDROID_HOME/cmdline-tools/v19/cmdline-tools/bin/sdkmanager"
 if [[ ! -x "$sdkmanager" ]]; then
@@ -45,6 +45,6 @@ yes 2>/dev/null | "$sdkmanager" "--sdk_root=$ANDROID_HOME" "${proxy_args[@]}" --
 sdk_license_status=${PIPESTATUS[1]}
 set -o pipefail
 if [[ "$sdk_license_status" != 0 ]]; then cat "$LUMA_TOOLCHAINS/downloads/licenses.log"; exit "$sdk_license_status"; fi
-"$sdkmanager" "--sdk_root=$ANDROID_HOME" "${proxy_args[@]}" 'platforms;android-35' 'build-tools;35.0.0' platform-tools
+"$sdkmanager" "--sdk_root=$ANDROID_HOME" "${proxy_args[@]}" 'platforms;android-36' 'build-tools;36.0.0' platform-tools
 gradle --no-daemon --console=plain assembleFullDebug assembleStudioDebug testFullDebugUnitTest testStudioDebugUnitTest lintFullDebug lintStudioDebug
 python3 scripts/verify_apks.py

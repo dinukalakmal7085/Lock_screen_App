@@ -6,9 +6,17 @@ import java.util.List;
 
 /** Studio has no companion service, notification listener, or special-access capability. */
 final class EditionFeatures {
+  static String flashlight(Context c) {
+    return "Flashlight controls are available in the full edition.";
+  }
+
   static final boolean HAS_COMPANION = false;
 
   static boolean isActive() {
+    return false;
+  }
+
+  static boolean accessGranted(Context context) {
     return false;
   }
 

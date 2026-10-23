@@ -34,8 +34,8 @@ public class LumaTest {
     try (ActivityController<MainActivity> c =
         Robolectric.buildActivity(MainActivity.class).setup()) {
       MainActivity a = c.get();
-      findDescription(a.getWindow().getDecorView(), "Classic clock style").performClick();
       findDescription(a.getWindow().getDecorView(), "Select Tide wallpaper").performClick();
+      findDescription(a.getWindow().getDecorView(), "Classic clock style").performClick();
       assertEquals(1, new Preferences(a).clock());
       assertEquals(2, new Preferences(a).wallpaper());
       c.recreate();
@@ -50,14 +50,14 @@ public class LumaTest {
         Robolectric.buildActivity(MainActivity.class).setup()) {
       View decor = c.get().getWindow().getDecorView();
       findDescription(decor, "Wallpapers tab").performClick();
-      assertNotNull(findText(c.get().getWindow().getDecorView(), "Set the mood."));
+      assertNotNull(findText(c.get().getWindow().getDecorView(), "Find your signature."));
       findDescription(c.get().getWindow().getDecorView(), "Select Ember wallpaper").performClick();
       assertEquals(3, new Preferences(c.get()).wallpaper());
       findText(c.get().getWindow().getDecorView(), "Preview selected wallpaper  ↗").performClick();
       Intent next = shadowOf(c.get()).getNextStartedActivity();
       assertEquals(LockScreenActivity.class.getName(), next.getComponent().getClassName());
       findDescription(c.get().getWindow().getDecorView(), "Settings tab").performClick();
-      assertNotNull(findText(c.get().getWindow().getDecorView(), "Enable companion"));
+      assertNotNull(findText(c.get().getWindow().getDecorView(), "Set up lock screen"));
     }
   }
 
@@ -137,6 +137,75 @@ public class LumaTest {
   }
 
   @Test
+  public void updatedNotificationsMoveToFrontAndSecretUpdatesRemoveCachedTitles() {
+    LumaNotificationListener listener =
+        Robolectric.buildService(LumaNotificationListener.class).create().get();
+    listener.onListenerDisconnected();
+    for (int i = 1; i <= 2; i++)
+      listener.onNotificationPosted(
+          notification(
+              i,
+              new Notification.Builder(context, "test")
+                  .setContentTitle("Public " + i)
+                  .setVisibility(Notification.VISIBILITY_PUBLIC)
+                  .build()));
+    listener.onNotificationPosted(
+        notification(
+            1,
+            new Notification.Builder(context, "test")
+                .setContentTitle("Updated first")
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .build()));
+    assertEquals("Updated first", LumaNotificationListener.entries().get(0).title);
+    listener.onNotificationPosted(
+        notification(
+            1,
+            new Notification.Builder(context, "test")
+                .setContentTitle("Now secret")
+                .setVisibility(Notification.VISIBILITY_SECRET)
+                .build()));
+    assertEquals(1, LumaNotificationListener.entries().size());
+    assertEquals("Public 2", LumaNotificationListener.entries().get(0).title);
+    listener.onListenerDisconnected();
+  }
+
+  @Test
+  public void automaticScreenOnlyShowsForLockedWakeAndYieldsToSystemPrompts() {
+    org.robolectric.android.controller.ServiceController<LockScreenService> controller =
+        Robolectric.buildService(LockScreenService.class).create();
+    try {
+      LockScreenService service = controller.get();
+      service.onServiceConnected();
+      WindowManager wm = service.getSystemService(WindowManager.class);
+      org.robolectric.shadows.ShadowWindowManagerImpl windows =
+          org.robolectric.shadow.api.Shadow.extract(wm);
+      shadowOf(service.getSystemService(android.os.PowerManager.class)).setIsInteractive(true);
+      shadowOf(service.getSystemService(KeyguardManager.class)).setKeyguardLocked(false);
+      service.sendBroadcast(new Intent(Intent.ACTION_SCREEN_ON));
+      shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(700));
+      assertTrue(windows.getViews().isEmpty());
+      shadowOf(service.getSystemService(KeyguardManager.class)).setKeyguardLocked(true);
+      service.sendBroadcast(new Intent(Intent.ACTION_SCREEN_ON));
+      shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(700));
+      assertEquals(1, windows.getViews().size());
+      android.view.accessibility.AccessibilityEvent prompt =
+          android.view.accessibility.AccessibilityEvent.obtain(
+              android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED);
+      prompt.setClassName("com.android.systemui.CredentialBouncer");
+      service.onAccessibilityEvent(prompt);
+      assertTrue(windows.getViews().isEmpty());
+      service.sendBroadcast(new Intent(Intent.ACTION_SCREEN_ON));
+      shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(700));
+      assertEquals(1, windows.getViews().size());
+      service.sendBroadcast(new Intent(Intent.ACTION_SCREEN_OFF));
+      shadowOf(Looper.getMainLooper()).idle();
+      assertTrue(windows.getViews().isEmpty());
+    } finally {
+      controller.destroy();
+    }
+  }
+
+  @Test
   public void enablingNotificationsRequiresExplicitAndroidAccess() {
     try (ActivityController<MainActivity> c =
         Robolectric.buildActivity(MainActivity.class).setup()) {
@@ -153,13 +222,13 @@ public class LumaTest {
   public void previewCanBeClosedWithoutChangingDeviceSecurity() {
     try (ActivityController<LockScreenActivity> c =
         Robolectric.buildActivity(LockScreenActivity.class).setup()) {
-      findText(c.get().getWindow().getDecorView(), "×  Close preview").performClick();
+      findDescription(c.get().getWindow().getDecorView(), "Close preview").performClick();
       assertTrue(c.get().isFinishing());
     }
   }
 
   @Test
-  @Config(sdk = {26, 35})
+  @Config(sdk = {26, 36})
   public void editorAndPreviewLaunchOnMinimumAndTargetAndroid() {
     try (ActivityController<MainActivity> editor =
             Robolectric.buildActivity(MainActivity.class).setup();
@@ -195,17 +264,30 @@ public class LumaTest {
   }
 
   @Test
-  public void notificationTurnOffActionDisablesCompanion() {
-    new Preferences(context).setFlag("enabled", true);
-    org.robolectric.android.controller.ServiceController<LockScreenService> controller =
-        Robolectric.buildService(LockScreenService.class).create();
-    try {
-      int result = controller.get().onStartCommand(new Intent(LockScreenService.STOP), 0, 1);
-      assertEquals(android.app.Service.START_NOT_STICKY, result);
-      assertFalse(new Preferences(context).flag("enabled", true));
-    } finally {
-      controller.destroy();
+  public void accessibilityServiceCannotReadScreenOrPerformGestures() throws Exception {
+    android.content.pm.ServiceInfo info =
+        context
+            .getPackageManager()
+            .getServiceInfo(
+                new ComponentName(context, LockScreenService.class),
+                android.content.pm.PackageManager.GET_META_DATA);
+    assertEquals("android.permission.BIND_ACCESSIBILITY_SERVICE", info.permission);
+    try (android.content.res.XmlResourceParser parser =
+        info.loadXmlMetaData(context.getPackageManager(), "android.accessibilityservice")) {
+      while (parser.next() != org.xmlpull.v1.XmlPullParser.START_TAG) {}
+      assertFalse(
+          parser.getAttributeBooleanValue(
+              "http://schemas.android.com/apk/res/android", "canRetrieveWindowContent", true));
+      assertFalse(
+          parser.getAttributeBooleanValue(
+              "http://schemas.android.com/apk/res/android", "canPerformGestures", true));
+      assertFalse(
+          parser.getAttributeBooleanValue(
+              "http://schemas.android.com/apk/res/android", "isAccessibilityTool", true));
     }
+    new Preferences(context).setFlag("enabled", true);
+    EditionFeatures.stop(context);
+    assertFalse(new Preferences(context).flag("enabled", true));
   }
 
   @Test

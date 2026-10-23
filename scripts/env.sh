@@ -6,7 +6,7 @@ export ANDROID_HOME="$LUMA_TOOLCHAINS/android"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export ANDROID_USER_HOME="$LUMA_TOOLCHAINS/android-user-home"
 export GRADLE_USER_HOME="$LUMA_TOOLCHAINS/gradle-home"
-export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$LUMA_TOOLCHAINS/gradle-8.11.1/bin:$PATH"
+export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$LUMA_TOOLCHAINS/gradle-8.13/bin:$PATH"
 # Retain the cloud proxy's CA rather than disabling TLS verification.
 if [[ -f /etc/ssl/certs/java/cacerts ]]; then
     export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts"

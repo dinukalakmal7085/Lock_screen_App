@@ -29,7 +29,10 @@ public final class LumaNotificationListener extends NotificationListenerService 
     Notification n = sbn.getNotification();
     if (sbn.getPackageName().equals(getPackageName())
         || sbn.isOngoing()
-        || n.visibility == Notification.VISIBILITY_SECRET) return;
+        || n.visibility == Notification.VISIBILITY_SECRET) {
+      onNotificationRemoved(sbn);
+      return;
+    }
     String label = sbn.getPackageName();
     try {
       label =
@@ -43,7 +46,11 @@ public final class LumaNotificationListener extends NotificationListenerService 
     String safeTitle =
         n.visibility == Notification.VISIBILITY_PUBLIC ? String.valueOf(title) : "New notification";
     synchronized (LumaNotificationListener.class) {
+      // Updates are the newest item; remove a previously cached public title immediately
+      // when its notification becomes private, secret or ongoing.
+      active.remove(sbn.getKey());
       active.put(sbn.getKey(), new NotificationSummary(label, safeTitle));
+      if (active.size() > 100) active.remove(active.keySet().iterator().next());
     }
   }
 

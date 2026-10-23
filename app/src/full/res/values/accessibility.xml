@@ -1,0 +1,3 @@
+<resources>
+    <string name="accessibility_description">Luma uses accessibility access to display your chosen lock screen when your phone wakes. It observes window state to avoid covering credential prompts and calls. It does not retrieve screen text, perform automated gestures, type, or collect app activity. Your PIN and biometrics stay with Android. Notification summaries require separate optional access. You can turn this service off in Android settings at any time.</string>
+</resources>

@@ -66,7 +66,7 @@ public class StudioTest {
       View root = c.get().getWindow().getDecorView();
       assertNotNull(findText(root, "✦   Luma Studio"));
       assertNotNull(findText(root, "24-hour clock"));
-      assertNull(findText(root, "Enable companion"));
+      assertNull(findText(root, "Set up lock screen"));
       assertNull(findText(root, "Allow notification access  ↗"));
       assertNull(findDescription(root, "Show notifications"));
     }
@@ -92,8 +92,8 @@ public class StudioTest {
   public void wallpaperAndClockChoicesPersistAndPreviewOpens() {
     try (ActivityController<MainActivity> c =
         Robolectric.buildActivity(MainActivity.class).setup()) {
-      findDescription(c.get().getWindow().getDecorView(), "Outline clock style").performClick();
       findDescription(c.get().getWindow().getDecorView(), "Select Tide wallpaper").performClick();
+      findDescription(c.get().getWindow().getDecorView(), "Outline clock style").performClick();
       c.recreate();
       assertEquals(2, new Preferences(c.get()).wallpaper());
       assertEquals(2, new Preferences(c.get()).clock());
@@ -104,12 +104,12 @@ public class StudioTest {
   }
 
   @Test
-  @Config(sdk = {26, 35})
+  @Config(sdk = {26, 36})
   public void previewRunsAndClosesOnMinimumAndTargetAndroid() {
     try (ActivityController<LockScreenActivity> c =
         Robolectric.buildActivity(LockScreenActivity.class).setup()) {
       assertNotNull(findText(c.get().getWindow().getDecorView(), "⌃   Open device"));
-      findText(c.get().getWindow().getDecorView(), "×  Close preview").performClick();
+      findDescription(c.get().getWindow().getDecorView(), "Close preview").performClick();
       assertTrue(c.get().isFinishing());
     }
   }
