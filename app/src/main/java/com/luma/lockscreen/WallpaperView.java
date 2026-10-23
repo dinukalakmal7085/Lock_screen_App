@@ -17,7 +17,9 @@ public final class WallpaperView extends View {
   };
   private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
   private int theme;
-  private Bitmap photo, foreground;
+  private Bitmap photo, foreground, bundled;
+  private int bundledWidth;
+  private final Path subject = new Path();
   private Preferences config;
 
   public WallpaperView(Context c) {
@@ -37,6 +39,10 @@ public final class WallpaperView extends View {
   public void setTheme(int value) {
     theme = Math.max(0, Math.min(ThemeCatalog.NAMES.length - 1, value));
     photo = null;
+    bundled = null;
+    Path outline = ThemeAssets.subject(theme);
+    subject.reset();
+    if (outline != null) subject.set(outline);
     invalidate();
   }
 
@@ -67,23 +73,22 @@ public final class WallpaperView extends View {
   }
 
   private void image(Canvas c, Bitmap b, int w, int h) {
+    c.drawBitmap(b, null, imageBounds(b, w, h), paint);
+  }
+
+  private RectF imageBounds(Bitmap b, int w, int h) {
     float zoom = config == null ? 1 : Math.max(1, Math.min(2, config.number("zoom", 100) / 100f));
     float scale = Math.max(w / (float) b.getWidth(), h / (float) b.getHeight()) * zoom;
     float pw = b.getWidth() * scale, ph = b.getHeight() * scale;
-    float
-        x =
-            config == null
-                ? 0
-                : Math.max(-100, Math.min(100, config.number("panX", 0))) / 100f * (pw - w) / 2,
-        y =
-            config == null
-                ? 0
-                : Math.max(-100, Math.min(100, config.number("panY", 0))) / 100f * (ph - h) / 2;
-    c.drawBitmap(
-        b,
-        null,
-        new RectF((w - pw) / 2 + x, (h - ph) / 2 + y, (w + pw) / 2 + x, (h + ph) / 2 + y),
-        paint);
+    float x =
+        config == null
+            ? 0
+            : Math.max(-100, Math.min(100, config.number("panX", 0))) / 100f * (pw - w) / 2;
+    float y =
+        config == null
+            ? 0
+            : Math.max(-100, Math.min(100, config.number("panY", 0))) / 100f * (ph - h) / 2;
+    return new RectF((w - pw) / 2 + x, (h - ph) / 2 + y, (w + pw) / 2 + x, (h + ph) / 2 + y);
   }
 
   private void gradient(Canvas c, int w, int h, int top, int bottom) {
@@ -108,6 +113,11 @@ public final class WallpaperView extends View {
       image(c, photo, w, h);
       int shade = config == null ? 18 : Math.max(0, Math.min(70, config.number("shade", 18)));
       gradient(c, w, h, Color.argb(shade * 2, 0, 0, 0), Color.argb(shade * 2 + 35, 0, 0, 0));
+      return;
+    }
+    if (ThemeCatalog.cinematic(theme)) {
+      Bitmap art = bundled(w);
+      if (art != null) image(c, art, w, h);
       return;
     }
     gradient(c, w, h, p[1], p[0]);
@@ -301,7 +311,26 @@ public final class WallpaperView extends View {
     if (config == null || !config.flag("depth", false)) return;
     if (photo != null) {
       if (foreground != null) image(c, foreground, w, h);
+    } else if (ThemeCatalog.cinematic(theme) && !subject.isEmpty()) {
+      Bitmap art = bundled(w);
+      if (art == null) return;
+      RectF rectangle = imageBounds(art, w, h);
+      int saved = c.save();
+      c.translate(rectangle.left, rectangle.top);
+      c.scale(rectangle.width(), rectangle.height());
+      c.clipPath(subject);
+      c.scale(1f / art.getWidth(), 1f / art.getHeight());
+      c.drawBitmap(art, 0, 0, paint);
+      c.restoreToCount(saved);
     } else if (ThemeCatalog.family(theme) == 1) mountainForeground(c, w, h, COLORS[theme % 6]);
+  }
+
+  private Bitmap bundled(int width) {
+    if (bundled == null || (width > 480 && bundledWidth <= 480)) {
+      bundled = ThemeAssets.bitmap(getContext(), theme, width);
+      bundledWidth = width;
+    }
+    return bundled;
   }
 
   public Bitmap bitmap(int w, int h) {

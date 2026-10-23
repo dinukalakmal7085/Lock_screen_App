@@ -167,7 +167,7 @@ public final class MainActivity extends Activity {
     weighted(actions, Ui.button(this, "Full preview  ↗", false, this::preview), false);
     body.addView(actions);
     gap(12);
-    TextView details = Ui.text(this, "PHOTO DEPTH  ·  4 WIDGETS  ·  6 CLOCK STYLES", 9, Ui.MUTED);
+    TextView details = Ui.text(this, "CINEMATIC THEMES  ·  GLASS XL  ·  PHOTO DEPTH", 9, Ui.MUTED);
     details.setGravity(Gravity.CENTER);
     details.setLetterSpacing(.08f);
     body.addView(details);
@@ -209,7 +209,7 @@ public final class MainActivity extends Activity {
   private void wallpapers() {
     eyebrow("THE COLLECTION");
     title("Find your signature.");
-    subtitle("32 original themes. Five moods. Entirely yours.");
+    subtitle("41 original themes. Cinematic scenes. Tall glass clocks.");
     gap(18);
     body.addView(Ui.button(this, "＋   Choose a photo", false, this::pickPhoto));
     gap(14);
@@ -278,6 +278,7 @@ public final class MainActivity extends Activity {
       if (themeCollection.equals("Favorites") && !prefs.favorite(i)) continue;
       if (!themeCollection.equals("All")
           && !themeCollection.equals("Favorites")
+          && !(themeCollection.equals("Cinematic") && ThemeCatalog.cinematic(i))
           && !ThemeCatalog.collection(i).equals(themeCollection)) continue;
       if (visible % 2 == 0) {
         row = Ui.row(this);
@@ -288,14 +289,18 @@ public final class MainActivity extends Activity {
       LinearLayout tile = Ui.column(this);
       FrameLayout art = new RoundedFrameLayout(this, 22);
       art.setBackground(Ui.rounded(Ui.PANEL, 22, this));
-      art.addView(new WallpaperView(this, id), new FrameLayout.LayoutParams(-1, -1));
-      TextView sample = Ui.text(this, "9:41", 40, Color.WHITE);
-      sample.setTypeface(
-          Typeface.create(
-              ThemeCatalog.family(id) == 1 ? "serif" : "sans-serif-thin", Typeface.NORMAL));
-      sample.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-      sample.setPadding(0, dp(24), 0, 0);
-      art.addView(sample, new FrameLayout.LayoutParams(-1, -1));
+      if (ThemeCatalog.cinematic(id)) {
+        art.addView(new ThemeTile(this, id), new FrameLayout.LayoutParams(-1, -1));
+      } else {
+        art.addView(new WallpaperView(this, id), new FrameLayout.LayoutParams(-1, -1));
+        TextView sample = Ui.text(this, "9:41", 40, Color.WHITE);
+        sample.setTypeface(
+            Typeface.create(
+                ThemeCatalog.family(id) == 1 ? "serif" : "sans-serif-thin", Typeface.NORMAL));
+        sample.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        sample.setPadding(0, dp(24), 0, 0);
+        art.addView(sample, new FrameLayout.LayoutParams(-1, -1));
+      }
       TextView favorite = Ui.bold(this, prefs.favorite(id) ? "♥" : "♡", 20, Color.WHITE);
       favorite.setGravity(Gravity.CENTER);
       favorite.setBackground(Ui.rounded(0x40000000, 22, this));
@@ -317,7 +322,7 @@ public final class MainActivity extends Activity {
             toast(ThemeCatalog.NAMES[id] + " theme applied. Customize it in the editor.");
           });
       art.setFocusable(true);
-      tile.addView(art, new LinearLayout.LayoutParams(-1, dp(218)));
+      tile.addView(art, new LinearLayout.LayoutParams(-1, dp(300)));
       Ui.space(tile, 8);
       tile.addView(
           Ui.bold(
@@ -329,7 +334,7 @@ public final class MainActivity extends Activity {
       tile.addView(
           Ui.text(
               this,
-              ThemeCatalog.collection(id) + (ThemeCatalog.family(id) == 1 ? " · Depth" : ""),
+              ThemeCatalog.collection(id) + (ThemeCatalog.depth(id) ? " · Depth" : ""),
               10,
               Ui.MUTED));
       Ui.space(tile, 18);

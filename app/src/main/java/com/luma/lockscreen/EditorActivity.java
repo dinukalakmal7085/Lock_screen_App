@@ -102,8 +102,12 @@ public final class EditorActivity extends Activity {
       label("Type, color & composition");
       for (int row = 0; row < 2; row++) {
         LinearLayout line = Ui.row(this);
-        for (int col = 0; col < 3; col++) {
-          final int index = row * 3 + col;
+        for (int col = 0; col < 4; col++) {
+          final int index = row * 4 + col;
+          if (index >= Preferences.CLOCKS.length) {
+            line.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
+            continue;
+          }
           TextView button =
               Ui.button(
                   this,
@@ -229,10 +233,10 @@ public final class EditorActivity extends Activity {
     } else {
       label("A little depth. A big difference.");
       note(
-          "Landscape themes place the mountain in front of your clock. For a photo, import a"
-              + " transparent PNG of the foreground subject that matches your background. Automatic"
-              + " subject removal is not included.");
-      toggle("Foreground depth", "depth", ThemeCatalog.family(draft.wallpaper()) == 1);
+          "Cinematic subjects and landscape mountains can sit in front of your clock. For a photo,"
+              + " import a transparent PNG of the foreground subject that matches your background."
+              + " Automatic subject removal is not included.");
+      toggle("Foreground depth", "depth", ThemeCatalog.depth(draft.wallpaper()));
       controls.addView(Ui.button(this, "Import foreground cutout", false, () -> pick(FOREGROUND)));
       space(10);
       controls.addView(

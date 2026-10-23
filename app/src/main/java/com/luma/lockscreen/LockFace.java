@@ -78,7 +78,10 @@ public final class LockFace extends FrameLayout {
     float displaySize = small ? size * .68f : size;
     clock.setAutoSizeTextTypeUniformWithConfiguration(
         24, Math.round(displaySize), 1, android.util.TypedValue.COMPLEX_UNIT_SP);
-    int clockHeight = prefs.clock() == 3 ? (small ? 145 : 220) : (small ? 85 : 132);
+    int clockHeight =
+        prefs.clock() == 6
+            ? Math.round(size * (small ? 1.15f : 1.75f))
+            : prefs.clock() == 3 ? (small ? 145 : 220) : (small ? 85 : 132);
     top.addView(clock, new LinearLayout.LayoutParams(-1, Ui.dp(c, clockHeight)));
     View foreground =
         new View(c) {

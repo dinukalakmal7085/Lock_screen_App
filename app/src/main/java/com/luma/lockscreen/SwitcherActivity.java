@@ -40,7 +40,7 @@ public final class SwitcherActivity extends Activity {
             finish();
           });
     }
-    int[] themes = {current.wallpaper(), 6, 14, 20, 26, 0};
+    int[] themes = {current.wallpaper(), 32, 33, 34, 37, 38, 35, 36, 39, 40, 6, 0};
     java.util.Set<Integer> unique = new java.util.LinkedHashSet<>();
     for (int id : themes) unique.add(id);
     for (int id : unique) {

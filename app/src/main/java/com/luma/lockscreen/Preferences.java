@@ -7,7 +7,7 @@ import android.content.SharedPreferences;
 public final class Preferences {
   public static final String[] WALLPAPERS = ThemeCatalog.NAMES;
   public static final String[] CLOCKS = {
-    "Liquid", "Classic", "Outline", "Stacked", "Editorial", "Mono"
+    "Liquid", "Classic", "Outline", "Stacked", "Editorial", "Mono", "Glass XL"
   };
   public static final int[] INKS = {
     0xFFFDFBFF, 0xFFFFE8BF, 0xFFA8F0D6, 0xFFB7DAFF, 0xFFFFC2D1, 0xFFD5C1FF, 0xFF1A2330, 0xFFF8AF72

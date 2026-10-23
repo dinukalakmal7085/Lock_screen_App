@@ -1,2 +1,2 @@
-da3fd32dbac7e79a3adf74249cf20d60f10485f1bcfab1b7435cf8767eb01a95  Luma-debug.apk
-3b4370f065b983f200e0a729c0597f0e53398b9dada05256ef01bbf576d6e281  Luma-studio.apk
+ed9be47622c4d9cc2a1ecaf8e5ca7404a8efaff305ce3d8399290139e3f4dd8c  Luma-debug.apk
+05fc9ecad84a69c58b77dbb595cd02d542ea9e867e4563ed51c07a4eb7939374  Luma-studio.apk

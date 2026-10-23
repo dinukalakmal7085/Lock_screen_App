@@ -168,7 +168,7 @@ public class EditorTest {
 
   @Test
   public void allCollectionsRenderWithoutNetworkAndSearchFiltersThemes() {
-    assertEquals(32, ThemeCatalog.NAMES.length);
+    assertEquals(41, ThemeCatalog.NAMES.length);
     for (int i = 0; i < ThemeCatalog.NAMES.length; i++) {
       Bitmap b = new WallpaperView(context, i).bitmap(80, 160);
       assertTrue(Color.alpha(b.getPixel(40, 80)) > 0);

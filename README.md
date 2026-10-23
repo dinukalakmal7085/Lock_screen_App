@@ -1,6 +1,6 @@
 # Luma
 
-An offline, native Android lock-screen personalizer with an iPhone-inspired composition and original artwork. Version **1.1.0-beta.1** is for phone testing and iteration; Play Store publication is deferred.
+An offline, native Android lock-screen personalizer with an iPhone-inspired composition and original artwork. Version **1.2.0-beta.1** is for phone testing and iteration; Play Store publication is deferred.
 
 ## Download the beta
 
@@ -15,18 +15,20 @@ The user tested the previous Studio edition on a Redmi 13C / Android 15. That ph
 
 ## What changed
 
-- **32 original theme presets across five artwork families:** Liquid, Landscape, Aurora, Orbit and Paper. Search, favorite and browse collections.
-- **Live editor with Save and Cancel:** six clock styles, eight ink colors, size, vertical position, alignment, four date formats and 12/24-hour display.
+- **41 original theme presets:** nine new cinematic photographic and 3D scenes plus the existing 32 procedural themes. Search, favorite and browse Cinematic, Ocean, Space, Sport, Architecture, Fantasy, Abstract and the original collections.
+- **Live editor with Save and Cancel:** seven clock styles including the new tall **Glass XL**, eight ink colors, size, vertical position, alignment, four date formats and 12/24-hour display.
 - **Up to four compact widgets:** real battery, date, next alarm and a personal focus phrase. Missing device data displays a dash.
-- **Layered depth:** built-in mountain foregrounds can cover part of the clock. Photo depth uses a separately imported transparent PNG cutout; automatic subject removal is not included.
+- **Layered depth:** built-in mountains and six cinematic subjects can cover part of the live clock using authored boundaries. Photo depth uses a separately imported transparent PNG cutout; automatic subject removal is not included.
 - **Photo composition:** Android's picker, EXIF orientation, zoom, horizontal/vertical position and shade. Originals are copied into private app storage; saved looks retain their own image references.
 - **Named looks:** save, restore, edit and delete up to 20 designs. Hold the full-screen face to open the horizontal look switcher, after Android unlock if necessary.
 - **Full edition:** opt-in accessibility overlay on locked screen wake, secure unlock bridge, camera-app shortcut, optional torch and privacy-aware notification cards.
 - Local preferences and artwork. No accounts, ads, analytics, remote catalogue or Internet permission.
 
+The new themes are **Abyss**, **Cloudwalker**, **Velocity**, **Stillwater**, **Eclipse Guardian**, **Emerald Halo**, **Helio Dunes**, **Soft Orbit** and **Stadium Flight**. Their clocks are drawn live rather than embedded in the image. Original AI-generated artwork is bundled for offline use; provenance and file hashes are documented in [ARTWORK.md](docs/ARTWORK.md).
+
 ## First phone test
 
-1. Open **Wallpapers**, select **Alpine**, then **Edit this look**.
+1. Open **Wallpapers → Cinematic**, select **Abyss** or **Cloudwalker**, then **Edit this look**.
 2. Change the clock, widgets and depth. Name the look and tap **Save**. Check **Saved** and **Full preview**.
 3. Hold the preview to switch looks. Try a portrait photo under **Backdrop**; photo depth requires a matching transparent PNG with the same canvas and subject position.
 4. **Apply lock wallpaper** changes Android's wallpaper. Android retains its system clock. Studio's custom clock and widgets appear in Luma's preview only.
@@ -63,13 +65,13 @@ Use `app/build/outputs/apk/full/debug/app-full-debug.apk` for the full edition. 
 
 ## Validation and scope
 
-Robolectric checks cover real activity navigation, editor drafts and rotation, Save/Cancel, four-widget configuration, saved looks, favorites, image import, theme rendering/search, secure-unlock gating and API 26/36 compatibility. Full-edition checks additionally exercise wake/lock guards, yielding to credential prompts, notification privacy, updates and dismissal. Studio checks verify its reduced settings and permission/service boundary. These checks simulate Android; they do not prove manufacturer-specific lock-screen behaviour.
+Robolectric checks cover real activity navigation, editor drafts and rotation, Save/Cancel, four-widget configuration, saved looks, favorites, image import, theme rendering/search, bounded cinematic image decoding, authored subject boundaries, live glass-clock redraw, secure-unlock gating and API 26/36 compatibility. Full-edition checks additionally exercise wake/lock guards, yielding to credential prompts, notification privacy, updates and dismissal. Studio checks verify its reduced settings and permission/service boundary. These checks simulate Android; they do not prove manufacturer-specific lock-screen behaviour.
 
-The beta passes **44 simulated checks** (25 full, 19 Studio) and both Android lint checks with zero errors. Remaining lint warnings concern English UI literals and newer attributes ignored on older Android versions.
+The beta passes **52 simulated checks** (29 full, 23 Studio) and both Android lint checks with zero errors. Remaining lint warnings concern English UI literals and newer attributes ignored on older Android versions.
 
 `verify_apks.py` inspects the compiled APKs: signatures, exact requested permissions, service bindings and DEX classes. Full uses only `SET_WALLPAPER` and optional `CAMERA` as ordinary permissions; its two services require protected Android binding permissions. Studio has only `SET_WALLPAPER` and excludes both service implementations. Neither edition requests ordinary application-overlay, foreground-service, notification-posting, storage or Internet permissions.
 
-[Preview the rendered lock screen](docs/screenshots/lock-screen.png), [editor](docs/screenshots/editor.png) and [themes](docs/screenshots/themes.png). These images come from simulated Android rendering, not a physical phone.
+[Preview the cinematic gallery](docs/screenshots/cinematic-gallery.png), [ocean lock screen](docs/screenshots/cinematic-ocean.png), [space lock screen](docs/screenshots/cinematic-space.png) and [original landscape](docs/screenshots/lock-screen.png), [editor](docs/screenshots/editor.png) and [themes](docs/screenshots/themes.png). These images come from simulated Android rendering, not a physical phone.
 
 Test reports are in `app/build/reports/`; generated native rendering screenshots are in `app/build/screenshots/`. [Reference notes](docs/REFERENCE.md) distinguish the listing's features from this beta. Music controls, stickers, automatic photo segmentation and weather are not implemented. Debug APKs are for testing; signing, store materials, access-service policy review and store distribution will be addressed after the user tests and improves the app.
 
