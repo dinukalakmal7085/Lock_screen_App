@@ -1,6 +1,6 @@
 # Luma
 
-An offline, native Android lock-screen personalizer with an iPhone-inspired composition and original artwork. Version **1.2.1-beta.1** is for phone testing and iteration; Play Store publication is deferred.
+An offline, native Android lock-screen personalizer with an iPhone-inspired composition and original artwork. Version **1.2.2-beta.1** is for phone testing and iteration; Play Store publication is deferred.
 
 ## Download the beta
 
@@ -11,9 +11,15 @@ An offline, native Android lock-screen personalizer with an iPhone-inspired comp
 
 Open a download link on your phone and open the downloaded APK. Requires Android 8.0 or newer. If GitHub opens a file page, choose **Download raw file**. Both editions share the existing package (`com.luma.lockscreen`) and debug signing identity, so installing one replaces the other and preserves appearance data. [SHA-256 checksums](downloads/SHA256SUMS.txt) accompany the APKs.
 
-The user tested the previous Studio edition on a Redmi 13C / Android 15. That phone previously blocked the full edition with a Play Protect sensitive-data warning. The new full beta has not been verified on that phone and may still be blocked. Keep Play Protect enabled; a cloud build cannot establish Google's installation verdict. Studio supports testing all visual features without the full edition's access services.
+The user has now installed the full edition on a Redmi 13C / Android 15 and reported delayed wake display, visible system bars and weak glass contrast. This update addresses those reports in code; the revised APK still needs a physical-phone retest. Earlier APKs received a Play Protect sensitive-data warning. Keep Play Protect enabled; cloud validation does not establish Google's installation verdict.
 
 ## What changed
+
+- **Wake display:** attempt immediately on SCREEN_ON, with bounded retries while keyguard becomes ready. Prepare the next face and its image texture during screen-off. Refresh notification privacy before attaching the prepared face.
+- **Preview lifecycle:** a preview closes on screen-off and no longer requests display above keyguard. Only the explicit authentication bridge can show while locked; cancellation/error closes it.
+- **Full-screen presentation:** shared preview/overlay controls, transient system bars, cutout/navigation-aware button placement, real vector shortcuts and one swipe prompt. Upward swipes starting on a shortcut also unlock. OEM overlay policies may still keep system bars visible.
+- **Glass quality:** stronger translucent fill and reflective edges, filtered higher-resolution glass texture, with bounded thumbnail texture sizes.
+- **Matching wallpaper:** Settings offers **Match system lock wallpaper**, with explicit confirmation. Android controls its notification shade and secure keyguard, so a system frame can still appear before Luma or during authentication.
 
 - **Preview before applying:** tap any theme to open a private preview, move through the current collection, favorite it, compare glass finishes and toggle available depth. **Use theme** applies the draft. **Customize** opens the editor with that draft; Cancel keeps the active look untouched.
 - **Glass control:** Clear, Frosted and Solid finishes plus adjustable clock width, saved with each look.
@@ -70,13 +76,13 @@ Use `app/build/outputs/apk/full/debug/app-full-debug.apk` for the full edition. 
 
 ## Validation and scope
 
-Robolectric checks cover real activity navigation, editor drafts and rotation, Save/Cancel, four-widget configuration, saved looks, favorites, image import, theme rendering/search, preview cancellation/application/customization, rotation of browser drafts and filters, glass finishes and width, bounded cinematic image decoding, authored subject boundaries, live glass-clock redraw, secure-unlock gating and API 26/36 compatibility. Full-edition checks additionally exercise wake/lock guards, yielding to credential prompts, notification privacy, updates and dismissal. Studio checks verify its reduced settings and permission/service boundary. These checks simulate Android; they do not prove manufacturer-specific lock-screen behaviour.
+Robolectric checks cover real activity navigation, editor drafts and rotation, Save/Cancel, four-widget configuration, saved looks, favorites, image import, theme rendering/search, preview cancellation/application/customization, rotation of browser drafts and filters, glass finishes and width, bounded cinematic image decoding, authored subject boundaries, live glass-clock redraw, secure-unlock gating, preview sleep teardown, authentication cancellation, shortcut swipes, navigation insets, glass contrast and API 26/35/36 compatibility. Full-edition checks additionally exercise immediate and delayed-keyguard wake guards, prepared-design refresh, first-frame notification redaction, yielding to credential prompts, notification privacy, updates and dismissal. Studio checks verify its reduced settings and permission/service boundary. These checks simulate Android; they do not prove manufacturer-specific lock-screen behaviour.
 
-The beta passes **70 simulated checks** (38 full, 32 Studio) and both Android lint checks with zero errors. Remaining lint warnings concern English UI literals and newer attributes ignored on older Android versions.
+The beta passes **84 simulated checks** (46 full, 38 Studio) and both Android lint checks with zero errors. Remaining lint warnings concern English UI literals and newer attributes ignored on older Android versions.
 
 `verify_apks.py` inspects the compiled APKs: signatures, exact requested permissions, service bindings and DEX classes. Full uses only `SET_WALLPAPER` and optional `CAMERA` as ordinary permissions; its two services require protected Android binding permissions. Studio has only `SET_WALLPAPER` and excludes both service implementations. Neither edition requests ordinary application-overlay, foreground-service, notification-posting, storage or Internet permissions.
 
-[Preview the theme browser](docs/screenshots/theme-browser.png) and [cinematic gallery](docs/screenshots/cinematic-gallery.png), [ocean lock screen](docs/screenshots/cinematic-ocean.png), [space lock screen](docs/screenshots/cinematic-space.png) and [original landscape](docs/screenshots/lock-screen.png), [editor](docs/screenshots/editor.png) and [themes](docs/screenshots/themes.png). These images come from simulated Android rendering, not a physical phone.
+[View the revised 720 × 1600 lock screen](docs/screenshots/redmi-cloudwalker.png). [Preview the theme browser](docs/screenshots/theme-browser.png) and [cinematic gallery](docs/screenshots/cinematic-gallery.png), [ocean lock screen](docs/screenshots/cinematic-ocean.png), [space lock screen](docs/screenshots/cinematic-space.png) and [original landscape](docs/screenshots/lock-screen.png), [editor](docs/screenshots/editor.png) and [themes](docs/screenshots/themes.png). These images come from simulated Android rendering, not a physical phone.
 
 Test reports are in `app/build/reports/`; generated native rendering screenshots are in `app/build/screenshots/`. [Reference notes](docs/REFERENCE.md) distinguish the listing's features from this beta. Music controls, stickers, automatic photo segmentation and weather are not implemented. Debug APKs are for testing; signing, store materials, access-service policy review and store distribution will be addressed after the user tests and improves the app.
 

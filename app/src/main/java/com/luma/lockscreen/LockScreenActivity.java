@@ -14,14 +14,48 @@ public final class LockScreenActivity extends Activity {
   @Override
   public void onCreate(Bundle state) {
     super.onCreate(state);
-    if (android.os.Build.VERSION.SDK_INT >= 27) setShowWhenLocked(true);
-    else getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
-    getWindow()
-        .getDecorView()
-        .setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-    getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
-    getWindow().setNavigationBarColor(0xFF11101C);
+    configurePresentation();
+    IntentFilter off = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+    if (android.os.Build.VERSION.SDK_INT >= 33)
+      registerReceiver(screenOff, off, Context.RECEIVER_NOT_EXPORTED);
+    else registerReceiver(screenOff, off);
+  }
+
+  private final BroadcastReceiver screenOff =
+      new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent i) {
+          finish();
+        }
+      };
+
+  private void configurePresentation() {
+    boolean bridge = getIntent().getBooleanExtra("authenticate", false);
+    // A normal preview must never reappear above keyguard on the next wake.
+    if (android.os.Build.VERSION.SDK_INT >= 27) setShowWhenLocked(bridge);
+    else if (bridge) getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+    else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+    LockScreenWindow.configure(getWindow());
+  }
+
+  @Override
+  protected void onNewIntent(Intent intent) {
+    super.onNewIntent(intent);
+    setIntent(intent);
+    authenticating = false;
+    configurePresentation();
+  }
+
+  @Override
+  public void onWindowFocusChanged(boolean focused) {
+    super.onWindowFocusChanged(focused);
+    if (focused) LockScreenWindow.immersive(getWindow().getDecorView());
+  }
+
+  @Override
+  protected void onDestroy() {
+    unregisterReceiver(screenOff);
+    super.onDestroy();
   }
 
   @Override
@@ -35,59 +69,21 @@ public final class LockScreenActivity extends Activity {
   }
 
   private void render() {
-    FrameLayout root = new SwipeFrameLayout(this, this::unlock);
-    root.setOnLongClickListener(
-        v -> {
-          unlockThen(() -> startActivity(new Intent(this, SwitcherActivity.class)));
-          return true;
-        });
-    root.addView(new LockFace(this, false), new FrameLayout.LayoutParams(-1, -1));
-    TextView close = Ui.button(this, "×", false, this::finish);
-    close.setContentDescription("Close preview");
-    close.setBackground(Ui.bordered(0x28000000, 0x25FFFFFF, 24, this));
-    close.setAlpha(.85f);
-    FrameLayout.LayoutParams cp =
-        new FrameLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48), Gravity.TOP | Gravity.END);
-    cp.setMargins(0, Ui.dp(this, 30), Ui.dp(this, 16), 0);
-    root.addView(close, cp);
-    TextView unlock = Ui.button(this, "⌃   Open device", false, this::unlock);
-    unlock.setBackground(Ui.bordered(0x25FFFFFF, 0x55FFFFFF, 28, this));
-    FrameLayout.LayoutParams up =
-        new FrameLayout.LayoutParams(
-            Ui.dp(this, 190), Ui.dp(this, 54), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-    up.bottomMargin = Ui.dp(this, 50);
-    root.addView(unlock, up);
-    TextView camera = Ui.button(this, "◉", false, () -> unlockThen(this::openCamera));
-    camera.setContentDescription("Open camera after unlocking");
-    camera.setBackground(Ui.bordered(0x44000000, 0x30FFFFFF, 26, this));
-    FrameLayout.LayoutParams cameraP =
-        new FrameLayout.LayoutParams(
-            Ui.dp(this, 52), Ui.dp(this, 52), Gravity.BOTTOM | Gravity.END);
-    cameraP.setMargins(0, 0, Ui.dp(this, 20), Ui.dp(this, 52));
-    root.addView(camera, cameraP);
-    if (EditionFeatures.HAS_COMPANION) {
-      TextView torch =
-          Ui.button(
-              this,
-              "ϟ",
-              false,
-              () ->
-                  Toast.makeText(this, EditionFeatures.flashlight(this), Toast.LENGTH_SHORT)
-                      .show());
-      torch.setContentDescription("Toggle flashlight");
-      torch.setBackground(Ui.bordered(0x44000000, 0x30FFFFFF, 26, this));
-      FrameLayout.LayoutParams tp =
-          new FrameLayout.LayoutParams(
-              Ui.dp(this, 52), Ui.dp(this, 52), Gravity.BOTTOM | Gravity.START);
-      tp.setMargins(Ui.dp(this, 20), 0, 0, Ui.dp(this, 52));
-      root.addView(torch, tp);
-    }
-    TextView info = Ui.text(this, "Hold to switch looks", 11, 0xCCFFFFFF);
-    info.setGravity(Gravity.CENTER);
-    FrameLayout.LayoutParams ip = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
-    ip.bottomMargin = Ui.dp(this, 112);
-    root.addView(info, ip);
+    LockScreenLayout root =
+        new LockScreenLayout(
+            this,
+            !getIntent().getBooleanExtra("authenticate", false),
+            this::unlock,
+            () -> unlockThen(this::openCamera),
+            EditionFeatures.HAS_COMPANION
+                ? () ->
+                    Toast.makeText(this, EditionFeatures.flashlight(this), Toast.LENGTH_SHORT)
+                        .show()
+                : null,
+            () -> unlockThen(() -> startActivity(new Intent(this, SwitcherActivity.class))),
+            this::finish);
     setContentView(root);
+    LockScreenWindow.immersive(getWindow().getDecorView());
   }
 
   private void unlock() {
@@ -110,9 +106,23 @@ public final class LockScreenActivity extends Activity {
             @Override
             public void onDismissSucceeded() {
               after.run();
+              finish();
+            }
+
+            @Override
+            public void onDismissCancelled() {
+              finish();
+            }
+
+            @Override
+            public void onDismissError() {
+              finish();
             }
           });
-    else after.run();
+    else {
+      after.run();
+      finish();
+    }
   }
 
   private void openCamera() {

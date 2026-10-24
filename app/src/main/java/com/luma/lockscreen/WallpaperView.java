@@ -41,6 +41,14 @@ public final class WallpaperView extends View {
     return this;
   }
 
+  int glassTextureWidth() {
+    return Math.min(getWidth(), artworkLimit <= 480 ? 240 : 720);
+  }
+
+  void preload(int width) {
+    if (ThemeCatalog.cinematic(theme) && photo == null) bundled(width);
+  }
+
   public void setTheme(int value) {
     theme = Math.max(0, Math.min(ThemeCatalog.NAMES.length - 1, value));
     photo = null;

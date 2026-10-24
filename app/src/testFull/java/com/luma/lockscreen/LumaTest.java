@@ -198,13 +198,18 @@ public class LumaTest {
       assertTrue(windows.getViews().isEmpty());
       shadowOf(service.getSystemService(KeyguardManager.class)).setKeyguardLocked(true);
       service.sendBroadcast(new Intent(Intent.ACTION_SCREEN_ON));
-      shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(700));
+      shadowOf(Looper.getMainLooper()).idle();
       assertEquals(1, windows.getViews().size());
+      WindowManager.LayoutParams params =
+          (WindowManager.LayoutParams) windows.getViews().get(0).getLayoutParams();
+      assertTrue((params.flags & WindowManager.LayoutParams.FLAG_FULLSCREEN) != 0);
+      assertTrue((params.flags & WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE) != 0);
       android.view.accessibility.AccessibilityEvent prompt =
           android.view.accessibility.AccessibilityEvent.obtain(
               android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED);
       prompt.setClassName("com.android.systemui.CredentialBouncer");
       service.onAccessibilityEvent(prompt);
+      shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(700));
       assertTrue(windows.getViews().isEmpty());
       service.sendBroadcast(new Intent(Intent.ACTION_SCREEN_ON));
       shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(700));
@@ -218,6 +223,36 @@ public class LumaTest {
   }
 
   @Test
+  public void preparedWakeUsesLatestDesignAndRetriesOnlyWhileLocked() {
+    org.robolectric.android.controller.ServiceController<LockScreenService> c =
+        Robolectric.buildService(LockScreenService.class).create();
+    try {
+      LockScreenService service = c.get();
+      service.onServiceConnected();
+      org.robolectric.shadows.ShadowWindowManagerImpl windows =
+          org.robolectric.shadow.api.Shadow.extract(service.getSystemService(WindowManager.class));
+      service.sendBroadcast(new Intent(Intent.ACTION_SCREEN_OFF));
+      shadowOf(Looper.getMainLooper()).idle();
+      ThemeCatalog.apply(new Preferences(context), 33);
+      shadowOf(service.getSystemService(android.os.PowerManager.class)).setIsInteractive(true);
+      shadowOf(service.getSystemService(KeyguardManager.class)).setKeyguardLocked(false);
+      service.sendBroadcast(new Intent(Intent.ACTION_SCREEN_ON));
+      shadowOf(Looper.getMainLooper()).idle();
+      assertTrue(windows.getViews().isEmpty());
+      shadowOf(service.getSystemService(KeyguardManager.class)).setKeyguardLocked(true);
+      shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(80));
+      assertEquals(1, windows.getViews().size());
+      LockScreenLayout layout = (LockScreenLayout) windows.getViews().get(0);
+      assertTrue(layout.face.getContentDescription().toString().contains("Cloudwalker"));
+      service.sendBroadcast(new Intent(Intent.ACTION_USER_PRESENT));
+      shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(700));
+      assertTrue(windows.getViews().isEmpty());
+    } finally {
+      c.destroy();
+    }
+  }
+
+  @Test
   public void enablingNotificationsRequiresExplicitAndroidAccess() {
     try (ActivityController<MainActivity> c =
         Robolectric.buildActivity(MainActivity.class).setup()) {
@@ -227,6 +262,48 @@ public class LumaTest {
       toggle.setChecked(true);
       assertFalse(new Preferences(context).flag("notifications", false));
       assertNotNull(org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog());
+    }
+  }
+
+  @Test
+  public void preparedNotificationsAreRedactedBeforeFirstLockedFrame() {
+    Preferences p = new Preferences(context);
+    p.setFlag("notifications", true);
+    p.setFlag("details", true);
+    LumaNotificationListener listener =
+        Robolectric.buildService(LumaNotificationListener.class).create().get();
+    listener.onListenerDisconnected();
+    listener.onNotificationPosted(
+        notification(
+            18,
+            new Notification.Builder(context, "test")
+                .setContentTitle("Visible only while unlocked")
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .build()));
+    org.robolectric.android.controller.ServiceController<LockScreenService> c =
+        Robolectric.buildService(LockScreenService.class).create();
+    try {
+      LockScreenService service = c.get();
+      service.onServiceConnected();
+      KeyguardManager keyguard = service.getSystemService(KeyguardManager.class);
+      shadowOf(keyguard).setIsDeviceLocked(false);
+      service.sendBroadcast(new Intent(Intent.ACTION_SCREEN_OFF));
+      shadowOf(Looper.getMainLooper()).idle();
+      shadowOf(keyguard).setKeyguardLocked(true);
+      shadowOf(keyguard).setIsDeviceLocked(true);
+      shadowOf(service.getSystemService(android.os.PowerManager.class)).setIsInteractive(true);
+      // Inspect attachment before the posted periodic refresh is allowed to execute.
+      BroadcastReceiver receiver =
+          org.robolectric.util.ReflectionHelpers.getField(service, "screen");
+      receiver.onReceive(service, new Intent(Intent.ACTION_SCREEN_ON));
+      org.robolectric.shadows.ShadowWindowManagerImpl windows =
+          org.robolectric.shadow.api.Shadow.extract(service.getSystemService(WindowManager.class));
+      assertEquals(1, windows.getViews().size());
+      assertNull(findText(windows.getViews().get(0), "Visible only while unlocked"));
+      assertNotNull(findText(windows.getViews().get(0), "New notification"));
+    } finally {
+      c.destroy();
+      listener.onListenerDisconnected();
     }
   }
 
@@ -247,7 +324,7 @@ public class LumaTest {
         ActivityController<LockScreenActivity> preview =
             Robolectric.buildActivity(LockScreenActivity.class).setup()) {
       assertNotNull(findText(editor.get().getWindow().getDecorView(), "A little more you."));
-      assertNotNull(findText(preview.get().getWindow().getDecorView(), "⌃   Open device"));
+      assertNotNull(findDescription(preview.get().getWindow().getDecorView(), "Open device"));
     }
   }
 

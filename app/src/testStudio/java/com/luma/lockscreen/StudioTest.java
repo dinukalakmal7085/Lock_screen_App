@@ -114,7 +114,7 @@ public class StudioTest {
   public void previewRunsAndClosesOnMinimumAndTargetAndroid() {
     try (ActivityController<LockScreenActivity> c =
         Robolectric.buildActivity(LockScreenActivity.class).setup()) {
-      assertNotNull(findText(c.get().getWindow().getDecorView(), "⌃   Open device"));
+      assertNotNull(findDescription(c.get().getWindow().getDecorView(), "Open device"));
       findDescription(c.get().getWindow().getDecorView(), "Close preview").performClick();
       assertTrue(c.get().isFinishing());
     }

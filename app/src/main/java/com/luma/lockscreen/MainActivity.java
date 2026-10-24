@@ -477,6 +477,17 @@ public final class MainActivity extends Activity {
               Ui.MUTED);
       help.setLineSpacing(dp(4), 1);
       companion.addView(help);
+      Ui.space(companion, 8);
+      companion.addView(
+          Ui.text(
+              this,
+              "Android may show its own lock screen briefly on wake or when opening the"
+                  + " notification shade. Apply the same wallpaper for a more consistent"
+                  + " transition.",
+              12,
+              Ui.MUTED));
+      companion.addView(
+          Ui.button(this, "Match system lock wallpaper", false, this::applyWallpaper));
       Ui.space(companion, 16);
       boolean enabled =
           prefs.flag("enabled", false)

@@ -19,6 +19,8 @@ final class GlassClock extends TextClock {
       new android.text.TextPaint(Paint.ANTI_ALIAS_FLAG);
   private Bitmap texture;
   private BitmapShader shader;
+  private Shader edgeShader;
+  private int textureWidth, textureHeight;
   private String drawnText = "";
   private int drawnWidth, drawnHeight, drawnStyle = -1;
   private final int finish;
@@ -34,8 +36,10 @@ final class GlassClock extends TextClock {
     finish = Math.max(0, Math.min(2, p.number("glassFinish", 1)));
     material.setColorFilter(
         new PorterDuffColorFilter(
-            (p.ink() & 0xffffff) | (finish == 0 ? 0x22000000 : 0x55000000),
+            (p.ink() & 0xffffff) | (finish == 0 ? 0x62000000 : 0xA0000000),
             PorterDuff.Mode.SRC_ATOP));
+    material.setFilterBitmap(true);
+    material.setDither(true);
   }
 
   @Override
@@ -68,14 +72,15 @@ final class GlassClock extends TextClock {
     }
     material.setStyle(Paint.Style.FILL);
     canvas.drawPath(glyphs, material);
-    if (finish != 2) canvas.drawPath(glyphs, gloss);
+    if (finish == 2) return;
+    canvas.drawPath(glyphs, gloss);
     rim.setShader(null);
-    rim.setColor(0x40070D18);
+    rim.setColor(0x30070D18);
     rim.setStyle(Paint.Style.STROKE);
-    rim.setStrokeWidth(Ui.dp(getContext(), 1.8f));
+    rim.setStrokeWidth(Ui.dp(getContext(), 2f));
     canvas.drawPath(glyphs, rim);
-    rim.setColor((prefs.ink() & 0xffffff) | 0xE6000000);
-    rim.setStrokeWidth(Ui.dp(getContext(), .65f));
+    rim.setShader(edgeShader);
+    rim.setStrokeWidth(Ui.dp(getContext(), 1.05f));
     canvas.drawPath(glyphs, rim);
   }
 
@@ -112,6 +117,15 @@ final class GlassClock extends TextClock {
     matrix.setRectToRect(bounds, destination, Matrix.ScaleToFit.FILL);
     rawGlyphs.transform(matrix, glyphs);
     int ink = prefs.ink() & 0xffffff;
+    edgeShader =
+        new LinearGradient(
+            0,
+            0,
+            getWidth() * .7f,
+            getHeight(),
+            new int[] {ink | 0xFF000000, ink | 0x70000000, ink | 0xD0000000},
+            new float[] {0, .55f, 1},
+            Shader.TileMode.CLAMP);
     gloss.setShader(
         new LinearGradient(
             0,
@@ -119,21 +133,32 @@ final class GlassClock extends TextClock {
             getWidth() * .35f,
             getHeight(),
             finish == 0
-                ? new int[] {ink | 0x55000000, ink | 0x10000000, ink | 0x04000000, ink | 0x33000000}
+                ? new int[] {ink | 0x85000000, ink | 0x25000000, ink | 0x12000000, ink | 0x65000000}
                 : new int[] {
-                  ink | 0x99000000, ink | 0x20000000, ink | 0x08000000, ink | 0x75000000
+                  ink | 0xBB000000, ink | 0x55000000, ink | 0x28000000, ink | 0x99000000
                 },
             new float[] {0, .3f, .65f, 1},
             Shader.TileMode.CLAMP));
   }
 
   private void ensureTexture() {
-    if (texture != null) return;
-    int width = Math.min(360, source.getWidth());
+    if (texture != null && textureWidth == source.getWidth() && textureHeight == source.getHeight())
+      return;
+    if (texture != null) texture.recycle();
+    textureWidth = source.getWidth();
+    textureHeight = source.getHeight();
+    int width = source.glassTextureWidth();
     texture =
         source.bitmap(
             width, Math.max(1, Math.round(width * source.getHeight() / (float) source.getWidth())));
     shader = new BitmapShader(texture, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+  }
+
+  void prepareTexture() {
+    if (source.getWidth() > 0
+        && source.getHeight() > 0
+        && (prefs.clock() == 0 || prefs.clock() == 6)
+        && finish != 2) ensureTexture();
   }
 
   @Override

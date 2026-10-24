@@ -5,7 +5,7 @@ import android.view.MotionEvent;
 import android.widget.FrameLayout;
 
 /** Swipe and accessibility-click share the same dismissal action. */
-final class SwipeFrameLayout extends FrameLayout {
+class SwipeFrameLayout extends FrameLayout {
   public SwipeFrameLayout(Context context) {
     this(context, () -> {});
   }
@@ -29,6 +29,19 @@ final class SwipeFrameLayout extends FrameLayout {
   }
 
   @Override
+  public boolean onInterceptTouchEvent(MotionEvent event) {
+    if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+      downY = event.getY();
+      downX = event.getX();
+      held = false;
+    }
+    // A swipe starting on a shortcut must still reach the common unlock action.
+    return event.getActionMasked() == MotionEvent.ACTION_MOVE
+        && downY - event.getY() > Ui.dp(getContext(), 12)
+        && downY - event.getY() > Math.abs(downX - event.getX());
+  }
+
+  @Override
   public boolean onTouchEvent(MotionEvent event) {
     if (event.getAction() == MotionEvent.ACTION_DOWN) {
       downY = event.getY();
@@ -44,7 +57,9 @@ final class SwipeFrameLayout extends FrameLayout {
     if (event.getAction() == MotionEvent.ACTION_CANCEL) handler.removeCallbacks(longPress);
     if (event.getAction() == MotionEvent.ACTION_UP) {
       handler.removeCallbacks(longPress);
-      if (!held && downY - event.getY() > Ui.dp(getContext(), 80)) performClick();
+      if (!held
+          && downY - event.getY() > Ui.dp(getContext(), 80)
+          && downY - event.getY() > Math.abs(downX - event.getX())) performClick();
       return true;
     }
     return true;
