@@ -4,7 +4,7 @@ Reference: [Liquid Lock Screen: KaLock](https://play.google.com/store/apps/detai
 
 The user prioritized iPhone-style lock screens and testing an improved app before Play Store preparation.
 
-| Listing describes | Luma 1.2.2-beta.1 |
+| Listing describes | Luma 1.3.0-beta.1 |
 | --- | --- |
 | Large customizable clocks and liquid glass styling | Seven native clock styles including the tall Glass XL, Clear/Frosted/Solid finishes, eight colors and adjustable width/composition |
 | 30+ theme collections | 41 original presets: nine cinematic scenes and 32 procedural designs; not 41 separate collections |

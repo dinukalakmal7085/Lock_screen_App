@@ -19,3 +19,7 @@ The artwork is bundled offline. Six scenes have authored subject boundaries that
 Previous procedural theme IDs 0–31 remain unchanged. The new cinematic themes use IDs 32–40. The gallery decodes bounded thumbnails and caches them separately from full-size artwork. Live text, crop transforms and subject clipping are covered by native rendering checks.
 
 Glass XL uses native font outlines stretched vertically, a wallpaper sample, a translucent highlight and a fine rim. It is an original glass treatment; it does not reproduce Apple’s proprietary rendering engine.
+
+## Clock numeral geometry
+
+Glass XL uses original vector paths authored in `ClockNumerals.java`. They are part of the application code and do not use a copied or bundled third-party font. The glass surface is generated at runtime from the chosen wallpaper; no clock is embedded in the artwork.

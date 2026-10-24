@@ -53,7 +53,10 @@ public final class LockFace extends FrameLayout {
     int gravity = alignment == 0 ? Gravity.START : alignment == 2 ? Gravity.END : Gravity.CENTER;
     top.setGravity(gravity);
     int offset = Math.max(0, Math.min(100, prefs.number("clockOffset", 0)));
-    int topPadding = small ? 24 + offset / 3 : 78 + offset;
+    int topPadding =
+        small
+            ? 24 + offset / 3
+            : (prefs.clock() == 6 && !prefs.flag("date", true) ? 60 : 78) + offset;
     top.setPadding(Ui.dp(c, 18), Ui.dp(c, topPadding), Ui.dp(c, 18), 0);
     addView(top, new LayoutParams(-1, -2));
     date = Ui.bold(c, "", small ? 12 : 18, prefs.ink());
@@ -84,7 +87,7 @@ public final class LockFace extends FrameLayout {
         24, Math.round(displaySize), 1, android.util.TypedValue.COMPLEX_UNIT_SP);
     int clockHeight =
         prefs.clock() == 6
-            ? Math.round(size * (small ? 1.15f : 1.75f))
+            ? Math.round(size * (small ? 1.45f : 2.25f))
             : prefs.clock() == 3 ? (small ? 145 : 220) : (small ? 85 : 132);
     top.addView(clock, new LinearLayout.LayoutParams(-1, Ui.dp(c, clockHeight)));
     View foreground =
@@ -99,7 +102,8 @@ public final class LockFace extends FrameLayout {
     widgets = Ui.row(c);
     widgets.setGravity(Gravity.CENTER);
     LayoutParams wp = new LayoutParams(-1, -2, Gravity.TOP);
-    wp.topMargin = Ui.dp(c, topPadding + (small ? 18 : 28) + clockHeight + 8);
+    wp.topMargin =
+        Ui.dp(c, topPadding + (prefs.flag("date", true) ? (small ? 18 : 28) : 0) + clockHeight + 8);
     wp.leftMargin = Ui.dp(c, 20);
     wp.rightMargin = Ui.dp(c, 20);
     addView(widgets, wp);
@@ -129,7 +133,7 @@ public final class LockFace extends FrameLayout {
                 DateTimeFormatter.ofPattern(
                     formats[Math.max(0, Math.min(3, prefs.number("dateFormat", 0)))],
                     Locale.getDefault())));
-    date.setVisibility(prefs.flag("date", true) ? VISIBLE : INVISIBLE);
+    date.setVisibility(prefs.flag("date", true) ? VISIBLE : GONE);
     widgets.removeAllViews();
     Intent b = getContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
     int battery =
